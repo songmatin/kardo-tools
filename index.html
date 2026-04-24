@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>空拍工具箱 — Kardo Aerial</title>
+<meta name="description" content="Kardo Aerial 空拍工具箱：NOTAM查詢、禁限航區、飛行天氣、充電站廁所地圖、離島航運資訊。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=Noto+Sans+TC:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --dark:#1a1917;
+  --card:rgba(26,25,23,0.72);
+  --card2:rgba(26,25,23,0.55);
+  --border:rgba(255,255,255,0.1);
+  --border2:rgba(255,255,255,0.06);
+  --accent:#b8965a;
+  --accent-bg:rgba(184,150,90,0.15);
+  --accent-border:rgba(184,150,90,0.3);
+  --white:#fff;
+  --w85:rgba(255,255,255,0.85);
+  --w55:rgba(255,255,255,0.55);
+  --w30:rgba(255,255,255,0.3);
+  --w10:rgba(255,255,255,0.1);
+  --w06:rgba(255,255,255,0.06);
+  --red:rgba(255,80,65,1);
+  --red-bg:rgba(255,80,65,0.15);
+  --green:rgba(50,210,100,1);
+  --green-bg:rgba(50,210,100,0.12);
+  --blue:rgba(80,160,255,1);
+  --blue-bg:rgba(80,160,255,0.12);
+  --yellow:rgba(255,200,60,1);
+  --yellow-bg:rgba(255,200,60,0.12);
+  --tabbar:72px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --topbar:56px;
+  --serif:'Noto Serif TC',Georgia,serif;
+  --sans:'DM Sans','Noto Sans TC',sans-serif;
+  --r:16px;--r-sm:10px;--r-xs:7px;
+}
+html,body{height:100%;overflow:hidden;background:var(--dark);}
+body{font-family:var(--sans);color:var(--white);-webkit-font-smoothing:antialiased;}
+
+/* ── BG ── */
+#bg{
+  position:fixed;inset:0;z-index:0;
+  background:url('https://static.wixstatic.com/media/8d236f_563587e32c3d43cda38606d3b57fe249~mv2.jpg') center/cover no-repeat;
+  filter:brightness(0.45) saturate(0.75);
+  transform:scale(1.04);
+  transition:opacity 0.4s;
+}
+#bg-overlay{
+  position:fixed;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(26,25,23,0.5) 0%,rgba(26,25,23,0.2) 50%,rgba(26,25,23,0.65) 100%);
+}
+
+/* ── APP SHELL ── */
+#app{
+  position:fixed;inset:0;z-index:10;
+  display:flex;flex-direction:column;
+  padding-bottom:calc(var(--tabbar) + var(--safe-bottom));
+}
+
+/* ── TOPBAR ── */
+#topbar{
+  flex-shrink:0;height:var(--topbar);
+  padding:env(safe-area-inset-top,0px) 18px 0;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(26,25,23,0.5);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-bottom:0.5px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-logo{
+  width:32px;height:32px;border-radius:9px;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 12px rgba(184,150,90,0.45);
+  flex-shrink:0;
+}
+.brand-logo svg{width:18px;height:18px;}
+.brand-name{font-family:var(--serif);font-size:16px;color:var(--white);}
+.brand-sub{font-size:10px;color:var(--w55);letter-spacing:0.1em;text-transform:uppercase;}
+
+/* ── SCROLL ── */
+#scroll{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+#scroll::-webkit-scrollbar{display:none;}
+
+/* ── PAGE ── */
+.page{display:none;min-height:100%;padding:0 0 24px;}
+.page.active{display:block;}
+
+/* ── PAGE HERO ── */
+.ph{text-align:center;padding:28px 20px 20px;}
+.ph-icon{
+  width:60px;height:60px;border-radius:18px;
+  background:var(--accent-bg);border:0.5px solid var(--accent-border);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 14px;
+  backdrop-filter:blur(10px);
+}
+.ph-icon svg{width:28px;height:28px;}
+.ph-title{font-family:var(--serif);font-size:26px;font-weight:400;margin-bottom:6px;}
+.ph-sub{font-size:13px;color:var(--w55);line-height:1.5;}
+
+/* ── GLASS CARD ── */
+.gc{
+  background:var(--card);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:0.5px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  margin:0 16px 10px;
+}
+.gc-title{
+  font-size:12px;font-weight:500;color:var(--w55);
+  letter-spacing:0.08em;text-transform:uppercase;
+  margin:20px 18px 8px;
+}
+
+/* ── COMING SOON ── */
+.coming{
+  padding:56px 20px;text-align:center;
+}
+.coming-emoji{font-size:48px;margin-bottom:14px;}
+.coming-title{font-size:19px;font-weight:600;margin-bottom:6px;}
+.coming-sub{font-size:13px;color:var(--w55);line-height:1.6;}
+
+/* ── HOME GRID ── */
+.home-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:10px;padding:0 16px;margin-top:4px;
+}
+.hc{
+  background:var(--card);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:0.5px solid var(--border);
+  border-radius:var(--r);padding:18px 16px;
+  cursor:pointer;transition:transform 0.15s,background 0.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.hc:active{transform:scale(0.96);}
+.hc.disabled{opacity:0.45;pointer-events:none;}
+.hc-icon{
+  width:42px;height:42px;border-radius:12px;
+  background:var(--accent-bg);border:0.5px solid var(--accent-border);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:10px;
+}
+.hc-icon svg{width:20px;height:20px;}
+.hc-name{font-size:14px;font-weight:600;margin-bottom:3px;}
+.hc-desc{font-size:11px;color:var(--w55);line-height:1.4;}
+.hc-badge{
+  display:inline-block;margin-top:7px;
+  font-size:9px;font-weight:500;padding:2px 7px;
+  border-radius:4px;background:var(--w06);color:var(--w30);
+  letter-spacing:0.04em;
+}
+
+/* ── FILTER BAR ── */
+.filter-bar{
+  display:flex;gap:6px;padding:12px 16px;
+  overflow-x:auto;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+.filter-bar::-webkit-scrollbar{display:none;}
+.fb{
+  display:flex;align-items:center;gap:5px;
+  padding:7px 12px;border-radius:20px;
+  border:0.5px solid var(--border);
+  background:var(--w06);
+  font-size:12px;font-weight:500;color:var(--w55);
+  cursor:pointer;white-space:nowrap;
+  transition:all 0.15s;
+  -webkit-tap-highlight-color:transparent;flex-shrink:0;
+}
+.fb.on{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent);}
+.fb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+/* ── MAP ── */
+#map{
+  height:58vh;min-height:320px;
+  margin:0 16px;border-radius:var(--r);
+  overflow:hidden;border:0.5px solid var(--border);
+}
+.leaflet-container{background:#1a1917;}
+.leaflet-tile{filter:brightness(0.85) saturate(0.9);}
+
+/* ── MAP LOCATE BTN ── */
+#locate-btn{
+  position:absolute;
+  bottom:calc(var(--tabbar) + var(--safe-bottom) + 12px);
+  right:24px;z-index:500;
+  width:44px;height:44px;border-radius:50%;
+  background:var(--card);backdrop-filter:blur(16px);
+  border:0.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.3);
+  -webkit-tap-highlight-color:transparent;
+  transition:transform 0.15s;
+}
+#locate-btn:active{transform:scale(0.9);}
+#locate-btn svg{width:20px;height:20px;color:var(--accent);}
+
+/* ── POPUP INFO ── */
+.popup-card{
+  background:var(--card2);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:0.5px solid var(--border);
+  border-radius:var(--r);padding:16px;
+  margin:10px 16px 0;
+  display:none;
+}
+.popup-card.show{display:block;}
+.popup-top{display:flex;align-items:flex-start;gap:12px;}
+.popup-type-icon{
+  width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.popup-name{font-size:15px;font-weight:600;margin-bottom:3px;}
+.popup-addr{font-size:12px;color:var(--w55);line-height:1.4;}
+.popup-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.ptag{
+  font-size:10px;font-weight:500;padding:3px 9px;
+  border-radius:5px;letter-spacing:0.03em;
+}
+
+/* ── STATS ROW ── */
+.stats-row{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:var(--border);
+  margin-top:10px;border-radius:var(--r-sm);overflow:hidden;
+}
+.stat-cell{background:var(--w06);padding:11px 8px;text-align:center;}
+.stat-val{font-size:14px;font-weight:600;color:var(--white);margin-bottom:2px;}
+.stat-lbl{font-size:10px;color:var(--w55);}
+
+/* ── QUERY BTN ── */
+.q-btn{
+  width:calc(100% - 32px);margin:10px 16px 0;
+  background:var(--accent);color:var(--dark);
+  border:none;border-radius:var(--r);
+  padding:15px;font-family:var(--sans);
+  font-size:15px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 20px rgba(184,150,90,0.35);
+  transition:opacity 0.15s,transform 0.1s;
+  -webkit-tap-highlight-color:transparent;
+}
+.q-btn:active{opacity:0.82;transform:scale(0.98);}
+.q-btn svg{width:17px;height:17px;}
+.q-btn.loading{opacity:0.6;pointer-events:none;}
+
+/* ── LEGEND ── */
+.legend{
+  margin:10px 16px 0;
+  background:var(--card);backdrop-filter:blur(12px);
+  border:0.5px solid var(--border);border-radius:var(--r);
+  padding:12px 14px;
+}
+.legend-title{font-size:11px;color:var(--w55);margin-bottom:8px;letter-spacing:0.06em;}
+.legend-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--w85);}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* ── DISCLAIMER ── */
+.disc{
+  font-size:11px;color:var(--w30);
+  text-align:center;line-height:1.6;
+  padding:16px 20px 8px;
+}
+
+/* ── TABBAR ── */
+#tabbar{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:rgba(20,18,16,0.88);
+  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border-top:0.5px solid var(--border);
+  display:flex;
+  height:calc(var(--tabbar) + var(--safe-bottom));
+  padding-bottom:var(--safe-bottom);
+}
+.ti{
+  flex:1;border:none;background:none;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;padding:6px 2px;
+  -webkit-tap-highlight-color:transparent;
+  transition:opacity 0.15s;
+}
+.ti:active{opacity:0.6;}
+.ti-icon{width:24px;height:24px;display:flex;align-items:center;justify-content:center;}
+.ti-icon svg{width:22px;height:22px;color:var(--w30);transition:color 0.2s,transform 0.2s;}
+.ti.active .ti-icon svg{color:var(--accent);transform:scale(1.1);}
+.ti-label{font-size:9.5px;font-weight:500;color:var(--w30);transition:color 0.2s;letter-spacing:0.02em;}
+.ti.active .ti-label{color:var(--accent);}
+
+/* ── CUSTOM MARKERS ── */
+.mk{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid rgba(255,255,255,0.2);
+  box-shadow:0 2px 8px rgba(0,0,0,0.4);
+  font-size:14px;
+  cursor:pointer;
+}
+.leaflet-popup-content-wrapper{
+  background:rgba(26,25,23,0.95)!important;
+  backdrop-filter:blur(20px);
+  border:0.5px solid rgba(255,255,255,0.1)!important;
+  border-radius:12px!important;
+  color:white!important;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4)!important;
+}
+.leaflet-popup-tip{background:rgba(26,25,23,0.95)!important;}
+.leaflet-popup-close-button{color:rgba(255,255,255,0.5)!important;font-size:18px!important;padding:6px 8px!important;}
+.lp-name{font-size:14px;font-weight:600;margin-bottom:4px;}
+.lp-type{font-size:11px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px;}
+.lp-addr{font-size:12px;color:rgba(255,255,255,0.6);line-height:1.4;}
+
+@media(min-width:520px){
+  .home-grid{grid-template-columns:repeat(3,1fr);}
+  #map{height:62vh;}
+}
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<div id="bg-overlay"></div>
+
+<div id="app">
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 18 18" fill="none">
+          <circle cx="9" cy="9" r="2" fill="white"/>
+          <line x1="9" y1="7" x2="9" y2="3.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="11" y1="11" x2="14" y2="14" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="7" y1="11" x2="4" y2="14" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="11" y1="7" x2="14" y2="4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="7" y1="7" x2="4" y2="4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="9" cy="3.5" r="1.5" stroke="white" stroke-width="1"/>
+          <circle cx="14" cy="14" r="1.5" stroke="white" stroke-width="1"/>
+          <circle cx="4" cy="14" r="1.5" stroke="white" stroke-width="1"/>
+          <circle cx="14" cy="4" r="1.5" stroke="white" stroke-width="1"/>
+          <circle cx="4" cy="4" r="1.5" stroke="white" stroke-width="1"/>
+        </svg>
+      </div>
+      <div class="brand-name">空拍工具箱</div>
+    </div>
+    <div class="brand-sub">Kardo Aerial</div>
+  </div>
+
+  <!-- SCROLL -->
+  <div id="scroll">
+
+    <!-- ══ HOME ══ -->
+    <div class="page active" id="p-home">
+      <div class="ph">
+        <div class="ph-title">空拍工具箱</div>
+        <div class="ph-sub">無人機飛手必備工具集<br>仟隅視覺有限公司 · Kardo Aerial</div>
+      </div>
+      <div class="home-grid">
+        <div class="hc" onclick="go('airspace')">
+          <div class="hc-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="16" height="16" rx="2"/><path d="M2 7h16M2 13h16M7 2v16"/></svg></div>
+          <div class="hc-name">禁限航區</div>
+          <div class="hc-desc">民航局空域地圖查詢</div>
+        </div>
+        <div class="hc" onclick="go('notam')">
+          <div class="hc-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><path d="M10 2C6.5 2 4 4.5 4 8c0 5 6 10 6 10s6-5 6-10c0-3.5-2.5-6-6-6z"/><circle cx="10" cy="8" r="2"/></svg></div>
+          <div class="hc-name">NOTAM</div>
+          <div class="hc-desc">飛航公告即時查詢</div>
+        </div>
+        <div class="hc" onclick="go('weather')">
+          <div class="hc-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><path d="M4 12a4 4 0 0 1 4-4h.5A3.5 3.5 0 0 1 16 11.5 3 3 0 0 1 13 17H5a3 3 0 0 1-1-5.83"/><path d="M10 4V2M14.24 5.76l1.42-1.42M16 10h2M14.24 14.24l1.42 1.42"/></svg></div>
+          <div class="hc-name">飛行天氣</div>
+          <div class="hc-desc">Golden Hour · 分高度風速</div>
+          <span class="hc-badge">即將推出</span>
+        </div>
+        <div class="hc" onclick="go('map')">
+          <div class="hc-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><circle cx="10" cy="9" r="3"/><path d="M10 2a7 7 0 0 1 7 7c0 5-7 11-7 11S3 14 3 9a7 7 0 0 1 7-7z"/></svg></div>
+          <div class="hc-name">充電站 · 廁所</div>
+          <div class="hc-desc">Tesla · 第三方 · 快慢充 · 廁所</div>
+        </div>
+        <div class="hc" onclick="go('island')">
+          <div class="hc-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><path d="M2 17s2-3 8-3 8 3 8 3"/><path d="M10 4a3 3 0 0 1 3 3c0 2.5-3 6-3 6S7 9.5 7 7a3 3 0 0 1 3-3z"/></svg></div>
+          <div class="hc-name">離島航運</div>
+          <div class="hc-desc">金門 · 馬祖 · 澎湖能見度</div>
+          <span class="hc-badge">即將推出</span>
+        </div>
+      </div>
+      <div class="disc">© 2026 仟隅視覺有限公司 · 所有資料僅供參考</div>
+    </div>
+
+    <!-- ══ AIRSPACE ══ -->
+    <div class="page" id="p-airspace">
+      <div class="ph">
+        <div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="22" height="22" rx="3"/><path d="M3 10h22M3 18h22M10 3v22"/></svg></div>
+        <div class="ph-title">禁限航區</div>
+        <div class="ph-sub">民航局遙控無人機管理資訊系統</div>
+      </div>
+      <div style="margin:0 16px;border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border);">
+        <iframe
+          src="https://drone.caa.gov.tw/Default/WebGuide"
+          style="width:100%;height:65vh;border:none;display:block;"
+          title="民航局禁限航區查詢">
+        </iframe>
+      </div>
+      <div class="disc">資料來源：交通部民用航空局 drone.caa.gov.tw</div>
+    </div>
+
+    <!-- ══ NOTAM ══ -->
+    <div class="page" id="p-notam">
+      <div class="ph">
+        <div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><path d="M14 4C9.5 4 6 7.5 6 12c0 6.5 8 14 8 14s8-7.5 8-14c0-4.5-3.5-8-8-8z"/><circle cx="14" cy="12" r="3"/></svg></div>
+        <div class="ph-title">NOTAM 查詢</div>
+        <div class="ph-sub">選擇機場查詢即時飛航公告</div>
+      </div>
+
+      <!-- Airport Grid -->
+      <div class="gc-title">選擇機場</div>
+      <div class="gc" style="margin-bottom:10px;">
+        <div id="ap-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);"></div>
+      </div>
+
+      <button class="q-btn" id="notam-btn" onclick="queryNotam()">
+        <svg viewBox="0 0 17 17" fill="none"><circle cx="7.5" cy="7.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11.5 11.5L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        查詢 NOTAM
+      </button>
+
+      <div id="notam-result"></div>
+      <div class="disc">資料來源：aviationweather.gov · 僅供參考</div>
+    </div>
+
+    <!-- ══ WEATHER ══ -->
+    <div class="page" id="p-weather">
+      <div class="coming">
+        <div class="coming-emoji">🌤</div>
+        <div class="coming-title">飛行天氣儀表板</div>
+        <div class="coming-sub">Golden Hour · 藍調時刻<br>分高度風速 · 降雨機率<br><br>即將推出</div>
+      </div>
+    </div>
+
+    <!-- ══ MAP ══ -->
+    <div class="page" id="p-map">
+      <div class="ph" style="padding-bottom:12px;">
+        <div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><circle cx="14" cy="12" r="4"/><path d="M14 3a9 9 0 0 1 9 9c0 6.5-9 16-9 16S5 18.5 5 12a9 9 0 0 1 9-9z"/></svg></div>
+        <div class="ph-title">充電站 · 廁所</div>
+        <div class="ph-sub">點選圖示查看詳情</div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="fb on" id="f-tesla" onclick="toggleFilter('tesla')">
+          <div class="fb-dot" style="background:#e82127;"></div>Tesla
+        </div>
+        <div class="fb on" id="f-fast" onclick="toggleFilter('fast')">
+          <div class="fb-dot" style="background:#ff9f0a;"></div>第三方快充
+        </div>
+        <div class="fb on" id="f-slow" onclick="toggleFilter('slow')">
+          <div class="fb-dot" style="background:#30d158;"></div>第三方慢充
+        </div>
+        <div class="fb on" id="f-711" onclick="toggleFilter('711')">
+          <div class="fb-dot" style="background:#64d2ff;"></div>7-11
+        </div>
+        <div class="fb on" id="f-family" onclick="toggleFilter('family')">
+          <div class="fb-dot" style="background:#bf5af2;"></div>全家
+        </div>
+        <div class="fb on" id="f-gas" onclick="toggleFilter('gas')">
+          <div class="fb-dot" style="background:#ffd60a;"></div>加油站
+        </div>
+        <div class="fb on" id="f-park" onclick="toggleFilter('park')">
+          <div class="fb-dot" style="background:#34c759;"></div>公園廁所
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div id="map"></div>
+
+      <!-- Legend -->
+      <div class="legend">
+        <div class="legend-title">圖例</div>
+        <div class="legend-grid">
+          <div class="legend-item"><div class="legend-dot" style="background:#e82127;"></div>Tesla Supercharger</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ff9f0a;"></div>第三方快充（DC）</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#30d158;"></div>第三方慢充（AC）</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#64d2ff;"></div>7-ELEVEN 廁所</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#bf5af2;"></div>全家 FamilyMart</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ffd60a;"></div>加油站廁所</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#34c759;"></div>公園廁所</div>
+        </div>
+      </div>
+
+      <button class="q-btn" onclick="locateAndSearch()" id="map-btn" style="margin-top:10px;">
+        <svg viewBox="0 0 17 17" fill="none"><circle cx="8.5" cy="8.5" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 1v2M8.5 14v2M1 8.5h2M14 8.5h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        搜尋目前位置附近
+      </button>
+
+      <div class="disc">資料來源：OpenStreetMap · 部分資料可能未即時更新</div>
+    </div>
+
+    <!-- ══ ISLAND ══ -->
+    <div class="page" id="p-island">
+      <div class="coming">
+        <div class="coming-emoji">⛴️</div>
+        <div class="coming-title">離島航運資訊</div>
+        <div class="coming-sub">金門 · 馬祖 · 澎湖<br>能見度 · 風速 · 停航資訊<br><br>即將推出</div>
+      </div>
+    </div>
+
+  </div><!-- /scroll -->
+</div><!-- /app -->
+
+<!-- TABBAR -->
+<div id="tabbar">
+  <button class="ti active" onclick="go('home')" id="tab-home">
+    <div class="ti-icon"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 9.5L11 3l8 6.5V19a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M8 20V13h6v7"/></svg></div>
+    <div class="ti-label">首頁</div>
+  </button>
+  <button class="ti" onclick="go('airspace')" id="tab-airspace">
+    <div class="ti-icon"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="18" height="18" rx="2"/><path d="M2 8h18M2 14h18M8 2v18"/></svg></div>
+    <div class="ti-label">禁限航區</div>
+  </button>
+  <button class="ti" onclick="go('notam')" id="tab-notam">
+    <div class="ti-icon"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M11 3C7.5 3 5 5.5 5 9c0 5.5 6 10 6 10s6-4.5 6-10c0-3.5-2.5-6-6-6z"/><circle cx="11" cy="9" r="2.5"/></svg></div>
+    <div class="ti-label">NOTAM</div>
+  </button>
+  <button class="ti" onclick="go('map')" id="tab-map">
+    <div class="ti-icon"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="10" r="3"/><path d="M11 2a8 8 0 0 1 8 8c0 6-8 12-8 12S3 16 3 10a8 8 0 0 1 8-8z"/></svg></div>
+    <div class="ti-label">地圖工具</div>
+  </button>
+  <button class="ti" onclick="go('island')" id="tab-island">
+    <div class="ti-icon"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 18s3-4 9-4 9 4 9 4"/><path d="M11 5a4 4 0 0 1 4 4c0 3-4 7-4 7S7 12 7 9a4 4 0 0 1 4-4z"/></svg></div>
+    <div class="ti-label">離島航運</div>
+  </button>
+</div>
+
+<script>
+// ══ NAVIGATION ══
+const pages = ['home','airspace','notam','weather','map','island'];
+function go(id) {
+  pages.forEach(p => {
+    const pg = document.getElementById('p-'+p);
+    const tb = document.getElementById('tab-'+p);
+    if(pg) pg.classList.toggle('active', p===id);
+    if(tb) tb.classList.toggle('active', p===id);
+  });
+  document.getElementById('scroll').scrollTop = 0;
+  if(id==='map' && !mapInited) initMap();
+  if(id==='notam' && !notamInited) initNotam();
+}
+
+// ══ NOTAM ══
+const AIRPORTS = [
+  {c:'RCTP',n:'桃園'},{c:'RCSS',n:'松山'},{c:'RCKH',n:'高雄'},
+  {c:'RCMQ',n:'台中'},{c:'RCNN',n:'台南'},{c:'RCKU',n:'嘉義'},
+  {c:'RCFN',n:'台東'},{c:'RCYU',n:'花蓮'},{c:'RCLY',n:'蘭嶼'},
+  {c:'RCGI',n:'綠島'},{c:'RCQC',n:'澎湖'},{c:'RCBS',n:'金門'},
+  {c:'RCMT',n:'北竿'},{c:'RCFG',n:'南竿'},{c:'RCKW',n:'恆春'},
+  {c:'RCWA',n:'望安'},{c:'RCCM',n:'七美'},{c:'RCAA',n:'台北FIR'},
+];
+let selAp = 'RCTP';
+let notamInited = false;
+
+function initNotam() {
+  notamInited = true;
+  const g = document.getElementById('ap-grid');
+  AIRPORTS.forEach(ap => {
+    const b = document.createElement('button');
+    b.style.cssText = 'background:var(--w06);border:none;cursor:pointer;padding:13px 6px;text-align:center;-webkit-tap-highlight-color:transparent;transition:background 0.15s;';
+    b.innerHTML = `<div style="font-size:12px;font-weight:600;color:${ap.c===selAp?'var(--accent)':'var(--w85)'};letter-spacing:0.4px;margin-bottom:2px;">${ap.c}</div><div style="font-size:10px;color:var(--w55);">${ap.n}</div>`;
+    b.onclick = () => {
+      selAp = ap.c;
+      g.querySelectorAll('button').forEach((btn,i) => {
+        btn.querySelector('div').style.color = AIRPORTS[i].c===selAp ? 'var(--accent)' : 'var(--w85)';
+        btn.style.background = AIRPORTS[i].c===selAp ? 'var(--accent-bg)' : 'var(--w06)';
+      });
+    };
+    if(ap.c===selAp) b.style.background='var(--accent-bg)';
+    g.appendChild(b);
+  });
+}
+
+async function queryNotam() {
+  const btn = document.getElementById('notam-btn');
+  const res = document.getElementById('notam-result');
+  btn.classList.add('loading');
+  btn.textContent = '查詢中…';
+  res.innerHTML = `<div style="padding:40px;text-align:center;"><div style="width:28px;height:28px;border:2px solid var(--w10);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div><div style="font-size:13px;color:var(--w55);">取得 NOTAM 資料中…</div></div>`;
+
+  try {
+    const r = await fetch(`https://aviationweather.gov/api/data/notam?icaoLocation=${selAp}&format=json`);
+    if(!r.ok) throw new Error();
+    const data = await r.json();
+    const items = Array.isArray(data)?data:(data.items||[]);
+    renderNotam(items);
+  } catch(e) {
+    res.innerHTML = `<div class="gc" style="margin-top:10px;padding:32px;text-align:center;"><div style="font-size:36px;margin-bottom:10px;">⚠️</div><div style="font-weight:600;margin-bottom:4px;">查詢失敗</div><div style="font-size:12px;color:var(--w55);">請稍後再試</div></div>`;
+  }
+  btn.classList.remove('loading');
+  btn.innerHTML = '<svg viewBox="0 0 17 17" fill="none"><circle cx="7.5" cy="7.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11.5 11.5L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> 查詢 NOTAM';
+}
+
+function renderNotam(items) {
+  const res = document.getElementById('notam-result');
+  if(!items.length){
+    res.innerHTML=`<div class="gc" style="margin-top:10px;padding:32px;text-align:center;"><div style="font-size:36px;margin-bottom:10px;">✅</div><div style="font-weight:600;margin-bottom:4px;">目前無有效 NOTAM</div><div style="font-size:12px;color:var(--w55);">${selAp} 目前沒有飛航公告</div></div>`;
+    return;
+  }
+  let h=`<div style="margin:10px 16px 4px;font-size:12px;color:var(--w55);letter-spacing:0.06em;">${selAp} · 共 ${items.length} 則</div><div class="gc" style="margin-top:0;">`;
+  items.forEach((n,i)=>{
+    const text=n.text||n.notamText||n.message||'';
+    const id=n.notamID||n.id||`#${i+1}`;
+    const t=getNotamType(text);
+    const sum=escH(text.split('\n').filter(l=>l.trim()&&!l.startsWith('!'))[0]||text.substring(0,90));
+    h+=`<div onclick="this.querySelector('.nfull').style.display=this.querySelector('.nfull').style.display==='none'?'block':'none'"
+      style="padding:13px 16px;border-bottom:0.5px solid var(--border);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+        <span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:${t.bg};color:${t.c};letter-spacing:0.04em;">${t.l}</span>
+        <span style="font-size:12px;color:var(--w55);">${escH(id)}</span>
+        <span style="margin-left:auto;color:var(--w30);font-size:12px;">›</span>
+      </div>
+      <div style="font-size:13px;color:var(--w85);line-height:1.4;">${sum.length>80?sum.substring(0,80)+'…':sum}</div>
+      <div class="nfull" style="display:none;margin-top:10px;padding:10px;background:rgba(0,0,0,0.3);border-radius:8px;font-size:11px;color:var(--w55);font-family:monospace;white-space:pre-wrap;word-break:break-all;line-height:1.65;">${escH(text)}</div>
+    </div>`;
+  });
+  h+=`</div>`;
+  res.innerHTML=h;
+}
+
+function getNotamType(t){
+  const u=t.toUpperCase();
+  if(u.includes('CLSD')||u.includes('PROHIBITED')) return {l:'禁航',bg:'rgba(255,80,65,0.2)',c:'#ff6b5b'};
+  if(u.includes('UAV')||u.includes('UAS')||u.includes('RPAS')) return {l:'無人機',bg:'rgba(255,159,10,0.2)',c:'#ff9f0a'};
+  if(u.includes('OBST')||u.includes('CRANE')) return {l:'障礙物',bg:'rgba(255,214,10,0.2)',c:'#ffd60a'};
+  return {l:'一般',bg:'rgba(184,150,90,0.15)',c:'var(--accent)'};
+}
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ══ MAP ══
+let map, mapInited=false;
+const filters={tesla:true,fast:true,slow:true,'711':true,family:true,gas:true,park:true};
+const layerGroups={};
+
+function toggleFilter(k){
+  filters[k]=!filters[k];
+  document.getElementById('f-'+k).classList.toggle('on',filters[k]);
+  if(layerGroups[k]) {
+    if(filters[k]) map.addLayer(layerGroups[k]);
+    else map.removeLayer(layerGroups[k]);
+  }
+}
+
+function mkIcon(color,emoji){
+  return L.divIcon({
+    html:`<div style="width:30px;height:30px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.5);border:2px solid rgba(255,255,255,0.25);">${emoji}</div>`,
+    className:'',iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-18]
+  });
+}
+
+const ICONS={
+  tesla:  mkIcon('#e82127','⚡'),
+  fast:   mkIcon('#ff9f0a','⚡'),
+  slow:   mkIcon('#30d158','🔌'),
+  '711':  mkIcon('#64d2ff','🏪'),
+  family: mkIcon('#bf5af2','🏪'),
+  gas:    mkIcon('#ffd60a','⛽'),
+  park:   mkIcon('#34c759','🚻'),
+};
+
+function initMap(){
+  mapInited=true;
+  map=L.map('map',{zoomControl:false,attributionControl:false}).setView([25.04,121.56],13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+  Object.keys(filters).forEach(k=>{layerGroups[k]=L.layerGroup().addTo(map);});
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const {latitude:lat,longitude:lng}=pos.coords;
+      map.setView([lat,lng],15);
+      L.circle([lat,lng],{radius:6,color:ICONS.tesla?'#e82127':'var(--accent)',fillColor:'var(--accent)',fillOpacity:1,weight:2}).addTo(map);
+      fetchAll(lat,lng);
+    },()=>fetchAll(25.04,121.56));
+  } else fetchAll(25.04,121.56);
+}
+
+function locateAndSearch(){
+  if(!mapInited) initMap();
+  else if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const{latitude:lat,longitude:lng}=pos.coords;
+      map.setView([lat,lng],15);
+      Object.values(layerGroups).forEach(g=>g.clearLayers());
+      fetchAll(lat,lng);
+    });
+  }
+}
+
+async function fetchAll(lat,lng){
+  const r=2000; // 2km radius
+  const queries=[
+    // Tesla
+    {k:'tesla',q:`node["amenity"="charging_station"]["network"~"Tesla|Supercharger",i](around:${r},${lat},${lng});`},
+    // Fast charge (DC)
+    {k:'fast',q:`node["amenity"="charging_station"]["socket:type2_combo"](around:${r},${lat},${lng});`},
+    // Slow charge (AC)
+    {k:'slow',q:`node["amenity"="charging_station"]["socket:type2"]["network"!~"Tesla|Supercharger",i](around:${r},${lat},${lng});`},
+    // 7-11
+    {k:'711',q:`node["brand"="7-Eleven"]["amenity"="toilets"](around:${r},${lat},${lng}); node["name"~"7-ELEVEN|7-11",i]["toilets"="yes"](around:${r},${lat},${lng}); node["brand"="7-Eleven"](around:500,${lat},${lng});`},
+    // Family
+    {k:'family',q:`node["brand"="全家"]["amenity"="toilets"](around:${r},${lat},${lng}); node["name"~"全家|FamilyMart",i]["toilets"="yes"](around:${r},${lat},${lng}); node["brand"~"全家|FamilyMart",i](around:500,${lat},${lng});`},
+    // Gas station
+    {k:'gas',q:`node["amenity"="fuel"]["toilets"="yes"](around:${r},${lat},${lng}); node["amenity"="fuel"](around:500,${lat},${lng});`},
+    // Park toilet
+    {k:'park',q:`node["amenity"="toilets"]["access"!="private"](around:${r},${lat},${lng});`},
+  ];
+
+  for(const {k,q} of queries){
+    try{
+      const body=`[out:json][timeout:10];(${q});out body;`;
+      const res=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body});
+      const data=await res.json();
+      (data.elements||[]).forEach(el=>{
+        if(!el.lat||!el.lon) return;
+        const name=el.tags?.name||el.tags?.brand||el.tags?.operator||typeName(k);
+        const addr=el.tags?.['addr:full']||el.tags?.['addr:street']||'';
+        const mk=L.marker([el.lat,el.lon],{icon:ICONS[k]});
+        mk.bindPopup(`<div class="lp-name">${escH(name)}</div><div class="lp-type" style="background:${typeColor(k)}20;color:${typeColor(k)};">${typeName(k)}</div>${addr?`<div class="lp-addr">${escH(addr)}</div>`:''}`);
+        layerGroups[k].addLayer(mk);
+      });
+    }catch(e){}
+  }
+}
+
+function typeName(k){
+  return {tesla:'Tesla Supercharger',fast:'快充（DC）',slow:'慢充（AC）','711':'7-ELEVEN',family:'全家 FamilyMart',gas:'加油站',park:'公園廁所'}[k]||k;
+}
+function typeColor(k){
+  return {tesla:'#e82127',fast:'#ff9f0a',slow:'#30d158','711':'#64d2ff',family:'#bf5af2',gas:'#ffd60a',park:'#34c759'}[k]||'var(--accent)';
+}
+
+// ══ KEYFRAMES ══
+const style=document.createElement('style');
+style.textContent='@keyframes spin{to{transform:rotate(360deg);}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
