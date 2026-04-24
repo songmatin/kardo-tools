@@ -1112,77 +1112,50 @@ function initNFZMap() {
   // 衛星底圖
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 18,
-    attribution: 'Esri'
   }).addTo(nfzMap);
 
-  // 街道標籤疊加
+  // 街道標籤
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-    maxZoom: 18,
-    opacity: 0.8
+    maxZoom: 18, opacity: 0.9
   }).addTo(nfzMap);
 
-  // 初始化圖層群組
   Object.keys(nfzLayers).forEach(k => {
     nfzLayers[k] = L.layerGroup().addTo(nfzMap);
   });
 
-  // 畫機場禁飛圓圈
-  AIRPORTS_NFZ.forEach(ap => {
-    const circle = L.circle([ap.lat, ap.lng], {
-      radius: ap.r,
-      color: '#ff4f41',
-      fillColor: '#ff4f41',
-      fillOpacity: 0.15,
-      weight: 2,
-      dashArray: '6,4',
-    });
-    circle.bindPopup(`
-      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${ap.name}</div>
-      <div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px;background:rgba(255,79,65,0.2);color:#ff6b5b;">禁飛區</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.7);">${ap.icao} / ${ap.iata}</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.7);">半徑 ${(ap.r/1000).toFixed(1)} km</div>
-    `);
-    // 機場標記
-    const marker = L.circleMarker([ap.lat, ap.lng], {
-      radius: 5,
-      color: '#ff4f41',
-      fillColor: '#ff4f41',
-      fillOpacity: 1,
-      weight: 2,
-    });
-    marker.bindPopup(`
-      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${ap.name}</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.7);">${ap.icao} / ${ap.iata}</div>
-    `);
-    nfzLayers.airport.addLayer(circle);
-    nfzLayers.airport.addLayer(marker);
-  });
+  // 載入民航局 GeoJSON
+  fetch('https://raw.githubusercontent.com/songmatin/kardo-tools/main/nfz.geojson')
+    .then(r => r.json())
+    .then(data => {
+      data.features.forEach(f => {
+        const p = f.properties;
+        const color = p.color || '#ff9f0a';
+        const type = p.zone_type || 'restrict';
 
-  // 畫限制區
-  RESTRICT_ZONES.forEach(z => {
-    const poly = L.polygon(z.coords, {
-      color: z.color,
-      fillColor: z.color,
-      fillOpacity: 0.2,
-      weight: 2,
-      dashArray: '8,4',
-    });
-    poly.bindPopup(`<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${z.name}</div><div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:rgba(255,159,10,0.2);color:#ff9f0a;">限制區</div>`);
-    nfzLayers.restrict.addLayer(poly);
-  });
+        const layer = L.geoJSON(f, {
+          style: {
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.2,
+            weight: 1.5,
+            dashArray: type === 'no_fly' ? null : '5,4',
+          }
+        });
 
-  // 畫國家公園
-  NATIONAL_PARKS.forEach(p => {
-    const poly = L.polygon(p.coords, {
-      color: p.color,
-      fillColor: p.color,
-      fillOpacity: 0.15,
-      weight: 1.5,
-      dashArray: '4,4',
-    });
-    poly.bindPopup(`<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${p.name}</div><div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:rgba(136,136,136,0.2);color:#aaa;">國家公園</div>`);
-    nfzLayers.park.addLayer(poly);
-  });
+        layer.bindPopup(`
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${p.name}</div>
+          <div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:${color}30;color:${color};">
+            ${type === 'no_fly' ? '🚫 禁飛區' : type === 'park' ? '🏞️ 國家公園／商港' : '⚠️ 限制區'}
+          </div>
+        `);
+
+        if (type === 'no_fly') nfzLayers.airport.addLayer(layer);
+        else if (type === 'park') nfzLayers.park.addLayer(layer);
+        else nfzLayers.restrict.addLayer(layer);
+      });
+      console.log('NFZ 載入完成:', data.features.length, '個區域');
+    })
+    .catch(e => console.error('NFZ 載入失敗:', e));
 }
 
 function toggleNFZ(k) {
