@@ -269,13 +269,36 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
   </div>
 </div><!-- /p-home -->
 
-<!-- NOTAM - 禁限航區 -->
+<!-- 禁限航區 - Leaflet 地圖版 -->
 <div class="page" id="p-notam">
-  <div class="ph" style="padding-bottom:10px;"><div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="22" height="22" rx="3"/><path d="M3 10h22M3 18h22M10 3v22"/></svg></div><div class="ph-title">禁限航區查詢</div><div class="ph-sub">民航局法人空域圖資查詢系統</div></div>
-  <div style="margin:0 16px;border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border);height:72vh;">
-    <iframe src="https://dronegis.caa.gov.tw/portal/apps/webappviewer/index.html?id=e0e7008ca198427694f0be3acecf6061" style="width:100%;height:100%;border:none;display:block;" title="民航局禁限航區查詢"></iframe>
+  <div class="ph" style="padding-bottom:10px;">
+    <div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><circle cx="14" cy="14" r="11"/><path d="M7 7l14 14"/></svg></div>
+    <div class="ph-title">禁限航區查詢</div>
+    <div class="ph-sub">台灣主要機場禁飛範圍 · 點選圖示查看詳情</div>
   </div>
-  <div class="disc">資料來源：交通部民用航空局 · 法人空域圖資查詢系統</div>
+  <!-- 圖層切換 -->
+  <div class="filter-bar">
+    <div class="fb on" id="nfz-airport" onclick="toggleNFZ('airport')"><div class="fb-dot" style="background:#ff4f41;"></div>機場禁飛區</div>
+    <div class="fb on" id="nfz-restrict" onclick="toggleNFZ('restrict')"><div class="fb-dot" style="background:#ff9f0a;"></div>限制區</div>
+    <div class="fb on" id="nfz-park" onclick="toggleNFZ('park')"><div class="fb-dot" style="background:#888;"></div>國家公園</div>
+  </div>
+  <div id="nfz-map" style="height:60vh;margin:0 16px;border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border);"></div>
+  <div style="margin:10px 16px 0;background:var(--card);backdrop-filter:blur(12px);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
+    <div style="font-size:10px;color:var(--w55);margin-bottom:8px;letter-spacing:0.06em;text-transform:uppercase;">圖例</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff4f41;flex-shrink:0;"></div>機場禁飛（5.6km）</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff9f0a;flex-shrink:0;"></div>限制區</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#888;flex-shrink:0;"></div>國家公園</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:2px;background:#50a0ff;flex-shrink:0;"></div>您的位置</div>
+    </div>
+  </div>
+  <button class="q-btn" onclick="locateNFZ()" style="margin-top:10px;">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>定位我的位置
+  </button>
+  <div style="margin:10px 16px 0;background:rgba(255,79,65,0.1);border:0.5px solid rgba(255,79,65,0.3);border-radius:var(--r-sm);padding:10px 14px;">
+    <div style="font-size:11px;color:#ff8a80;line-height:1.6;">⚠️ 本地圖僅供參考，資料來源為民航局公開資料及 OpenStreetMap。飛行前請務必至民航局官方系統確認最新空域資訊。</div>
+  </div>
+  <div class="disc">資料來源：民航局公告 · OpenStreetMap · 僅供參考</div>
 </div>
 
 <!-- WEATHER -->
@@ -781,6 +804,7 @@ function go(id){
   });
   document.getElementById('scroll').scrollTop=0;
   if(id==='map'&&!mapInited)initMap();
+  if(id==='notam'&&!nfzMap)initNFZMap();
   if(id==='notam'&&!notamInited)initNotam();
   if(id==='flight'&&!flightInited)initFlight();
 }
@@ -1038,6 +1062,148 @@ async function queryFlight(){
 }
 
 // CONTACTS SEARCH
+// ══ 禁限航區地圖 ══
+let nfzMap = null;
+const nfzLayers = { airport: null, restrict: null, park: null };
+const nfzFilters = { airport: true, restrict: true, park: true };
+
+// 台灣主要機場座標與資訊
+const AIRPORTS_NFZ = [
+  { name:'桃園國際機場', iata:'TPE', icao:'RCTP', lat:25.0777, lng:121.2330, r:5600 },
+  { name:'臺北松山機場', iata:'TSA', icao:'RCSS', lat:25.0630, lng:121.5523, r:5600 },
+  { name:'高雄小港機場', iata:'KHH', icao:'RCKH', lat:22.5771, lng:120.3497, r:5600 },
+  { name:'臺中清泉崗機場', iata:'RMQ', icao:'RCMQ', lat:24.2648, lng:120.6208, r:5600 },
+  { name:'臺南機場', iata:'TNN', icao:'RCNN', lat:22.9503, lng:120.2058, r:5600 },
+  { name:'嘉義水上機場', iata:'CYI', icao:'RCKU', lat:23.4618, lng:120.3930, r:5600 },
+  { name:'臺東豐年機場', iata:'TTT', icao:'RCFN', lat:22.7550, lng:121.1015, r:5600 },
+  { name:'花蓮機場', iata:'HUN', icao:'RCYU', lat:24.0231, lng:121.6176, r:5600 },
+  { name:'澎湖馬公機場', iata:'MZG', icao:'RCQC', lat:23.5687, lng:119.6278, r:5600 },
+  { name:'金門機場', iata:'KNH', icao:'RCBS', lat:24.4279, lng:118.3592, r:5600 },
+  { name:'馬祖北竿機場', iata:'MFK', icao:'RCMT', lat:26.2241, lng:120.0026, r:5600 },
+  { name:'馬祖南竿機場', iata:'LZN', icao:'RCFG', lat:26.1598, lng:119.9582, r:5600 },
+  { name:'蘭嶼機場', iata:'KYD', icao:'RCLY', lat:22.0270, lng:121.5349, r:3000 },
+  { name:'綠島機場', iata:'GNI', icao:'RCGI', lat:22.6739, lng:121.4661, r:3000 },
+  { name:'恆春機場', iata:'HCN', icao:'RCKW', lat:22.0408, lng:120.7303, r:3000 },
+  { name:'望安機場', iata:'WOT', icao:'RCWA', lat:23.3673, lng:119.5027, r:3000 },
+  { name:'七美機場', iata:'CMJ', icao:'RCCM', lat:23.2137, lng:119.4177, r:3000 },
+];
+
+// 限制區資料（主要軍事及限制空域）
+const RESTRICT_ZONES = [
+  { name:'RCR2 考潭', color:'#ff9f0a', coords:[[25.1167,121.3833],[25.1167,121.5167],[25.0167,121.5167],[25.0167,121.3833]] },
+  { name:'RCR16 陽明山', color:'#ff9f0a', coords:[[25.1833,121.4667],[25.2333,121.5667],[25.1667,121.5833],[25.1167,121.4833]] },
+  { name:'RCR48 樂山', color:'#ff9f0a', coords:[[24.7333,121.0167],[24.7833,121.1000],[24.7167,121.1333],[24.6667,121.0500]] },
+];
+
+// 國家公園
+const NATIONAL_PARKS = [
+  { name:'陽明山國家公園', color:'#888888', coords:[[25.1333,121.4500],[25.2167,121.4500],[25.2167,121.6000],[25.1333,121.6000]] },
+  { name:'太魯閣國家公園', color:'#888888', coords:[[24.1333,121.4667],[24.2833,121.4667],[24.2833,121.7333],[24.1333,121.7333]] },
+  { name:'玉山國家公園', color:'#888888', coords:[[23.3167,120.8333],[23.5833,120.8333],[23.5833,121.1167],[23.3167,121.1167]] },
+  { name:'雪霸國家公園', color:'#888888', coords:[[24.3000,121.0000],[24.5500,121.0000],[24.5500,121.3333],[24.3000,121.3333]] },
+  { name:'墾丁國家公園', color:'#888888', coords:[[21.9167,120.6833],[22.1333,120.6833],[22.1333,120.9333],[21.9167,120.9333]] },
+  { name:'金門國家公園', color:'#888888', coords:[[24.3500,118.2500],[24.4833,118.2500],[24.4833,118.4667],[24.3500,118.4667]] },
+];
+
+function initNFZMap() {
+  if (nfzMap) return;
+  nfzMap = L.map('nfz-map', { zoomControl: true, attributionControl: false }).setView([23.9, 120.9], 8);
+
+  // 衛星底圖
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+    attribution: 'Esri'
+  }).addTo(nfzMap);
+
+  // 街道標籤疊加
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18,
+    opacity: 0.8
+  }).addTo(nfzMap);
+
+  // 初始化圖層群組
+  Object.keys(nfzLayers).forEach(k => {
+    nfzLayers[k] = L.layerGroup().addTo(nfzMap);
+  });
+
+  // 畫機場禁飛圓圈
+  AIRPORTS_NFZ.forEach(ap => {
+    const circle = L.circle([ap.lat, ap.lng], {
+      radius: ap.r,
+      color: '#ff4f41',
+      fillColor: '#ff4f41',
+      fillOpacity: 0.15,
+      weight: 2,
+      dashArray: '6,4',
+    });
+    circle.bindPopup(`
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${ap.name}</div>
+      <div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px;background:rgba(255,79,65,0.2);color:#ff6b5b;">禁飛區</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.7);">${ap.icao} / ${ap.iata}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.7);">半徑 ${(ap.r/1000).toFixed(1)} km</div>
+    `);
+    // 機場標記
+    const marker = L.circleMarker([ap.lat, ap.lng], {
+      radius: 5,
+      color: '#ff4f41',
+      fillColor: '#ff4f41',
+      fillOpacity: 1,
+      weight: 2,
+    });
+    marker.bindPopup(`
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${ap.name}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.7);">${ap.icao} / ${ap.iata}</div>
+    `);
+    nfzLayers.airport.addLayer(circle);
+    nfzLayers.airport.addLayer(marker);
+  });
+
+  // 畫限制區
+  RESTRICT_ZONES.forEach(z => {
+    const poly = L.polygon(z.coords, {
+      color: z.color,
+      fillColor: z.color,
+      fillOpacity: 0.2,
+      weight: 2,
+      dashArray: '8,4',
+    });
+    poly.bindPopup(`<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${z.name}</div><div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:rgba(255,159,10,0.2);color:#ff9f0a;">限制區</div>`);
+    nfzLayers.restrict.addLayer(poly);
+  });
+
+  // 畫國家公園
+  NATIONAL_PARKS.forEach(p => {
+    const poly = L.polygon(p.coords, {
+      color: p.color,
+      fillColor: p.color,
+      fillOpacity: 0.15,
+      weight: 1.5,
+      dashArray: '4,4',
+    });
+    poly.bindPopup(`<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${p.name}</div><div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:rgba(136,136,136,0.2);color:#aaa;">國家公園</div>`);
+    nfzLayers.park.addLayer(poly);
+  });
+}
+
+function toggleNFZ(k) {
+  nfzFilters[k] = !nfzFilters[k];
+  document.getElementById('nfz-' + k).classList.toggle('on', nfzFilters[k]);
+  if (nfzLayers[k]) {
+    if (nfzFilters[k]) nfzMap.addLayer(nfzLayers[k]);
+    else nfzMap.removeLayer(nfzLayers[k]);
+  }
+}
+
+function locateNFZ() {
+  if (!navigator.geolocation) { alert('不支援定位'); return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    const { latitude: lat, longitude: lng } = p.coords;
+    nfzMap.setView([lat, lng], 14);
+    L.circleMarker([lat, lng], {
+      radius: 10, color: '#50a0ff', fillColor: '#50a0ff', fillOpacity: 1, weight: 2
+    }).addTo(nfzMap).bindPopup('📍 您的位置').openPopup();
+  }, () => alert('無法取得位置'));
+}
 function filterContacts(){
   const q=document.getElementById('contact-search').value.toLowerCase();
   document.querySelectorAll('.contact-item').forEach(el=>{
