@@ -824,7 +824,7 @@ async function queryNotam(){
       const u=text.toUpperCase();
       const t=u.includes('CLSD')||u.includes('PROHIBITED')?{l:'禁航',bg:'rgba(255,79,65,0.2)',c:'#ff6b5b'}:u.includes('UAV')||u.includes('UAS')?{l:'無人機',bg:'rgba(255,159,10,0.2)',c:'#ff9f0a'}:{l:'一般',bg:'rgba(184,150,90,0.15)',c:'var(--accent)'};
       const sum=escH((text.split('\n').filter(l=>l.trim()&&!l.startsWith('!'))[0]||text).substring(0,90));
-      h+='<div class="notam-item" onclick="this.classList.toggle('open')"><div class="notam-row1"><span class="n-badge" style="background:'+t.bg+';color:'+t.c+';">'+t.l+'</span><span class="n-id">'+escH(id)+'</span><span class="n-arr">›</span></div><div class="n-sum">'+sum+'</div><div class="n-full">'+escH(text)+'</div></div>';
+      h+='<div class="notam-item" onclick="this.classList.toggle("open")"><div class="notam-row1"><span class="n-badge" style="background:'+t.bg+';color:'+t.c+';">'+t.l+'</span><span class="n-id">'+escH(id)+'</span><span class="n-arr">›</span></div><div class="n-sum">'+sum+'</div><div class="n-full">'+escH(text)+'</div></div>';
     });
     res.innerHTML=h+'</div>';
   }catch(e){res.innerHTML='<div class="state-box"><div class="state-emoji">⚠️</div><div class="state-title">查詢失敗</div><div class="state-sub">請稍後再試</div></div>';}
