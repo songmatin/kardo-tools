@@ -1127,7 +1127,7 @@ function initNFZMap() {
   const BASE = 'https://raw.githubusercontent.com/songmatin/kardo-tools/main/';
   const LAYERS = [
     { file: 'nfz.geojson',             type: 'no_fly',   color: '#ff4f41', label: '🚫 禁飛區' },
-    { file: 'county.geojson',          type: 'restrict', color: '#ff9f0a', label: '⚠️ 縣市限制區' },
+    // county.geojson 是縣市行政邊界，不是個別禁飛點，移除
     { file: 'national_park.geojson',   type: 'park',     color: '#888888', label: '🏞️ 國家公園' },
     { file: 'commercial_port.geojson', type: 'park',     color: '#607d8b', label: '⚓ 商港' },
     { file: 'kinmen_matsu.geojson',    type: 'restrict', color: '#ff9f0a', label: '⚠️ 金馬限制區' },
