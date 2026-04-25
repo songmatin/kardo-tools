@@ -1133,11 +1133,11 @@ function initNFZMap() {
   // 載入民航局所有圖層
   const BASE = 'https://raw.githubusercontent.com/songmatin/kardo-tools/main/';
   const LAYERS = [
-    { file: 'nfz.geojson',             type: 'no_fly',   color: '#ff4f41', label: '🚫 禁飛區' },
+    { file: 'nfz.geojson',             type: 'no_fly',   color: '#e82127', label: '🚫 機場禁飛區', layer: 'airport' },
     // county.geojson 是縣市行政邊界，不是個別禁飛點，移除
     { file: 'national_park.geojson',   type: 'park',     color: '#888888', label: '🏞️ 國家公園', layer: 'park' },
     { file: 'commercial_port.geojson', type: 'port',     color: '#607d8b', label: '⚓ 商港', layer: 'port' },
-    { file: 'kinmen_matsu.geojson',    type: 'restrict', color: '#ff9f0a', label: '⚠️ 金馬限制區' },
+    { file: 'kinmen_matsu.geojson',    type: 'rcr',      color: '#ff6d00', label: '⚠️ RCR 限航區', layer: 'rcr' },
     // temporary 單獨處理
   ];
 
