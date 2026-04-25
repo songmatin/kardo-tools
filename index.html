@@ -278,10 +278,8 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
   </div>
   <!-- 圖層切換 -->
   <div class="filter-bar">
-    <div class="fb on" id="nfz-airport" onclick="toggleNFZ('airport')"><div class="fb-dot" style="background:#e82127;"></div>機場禁飛</div>
     <div class="fb on" id="nfz-county_red" onclick="toggleNFZ('county_red')"><div class="fb-dot" style="background:#ff4f41;"></div>縣市紅區</div>
     <div class="fb on" id="nfz-county_yellow" onclick="toggleNFZ('county_yellow')"><div class="fb-dot" style="background:#ff9f0a;"></div>縣市黃區</div>
-    <div class="fb on" id="nfz-rcr" onclick="toggleNFZ('rcr')"><div class="fb-dot" style="background:#ff6d00;"></div>RCR限航</div>
     <div class="fb on" id="nfz-park" onclick="toggleNFZ('park')"><div class="fb-dot" style="background:#888;"></div>國家公園</div>
     <div class="fb on" id="nfz-port" onclick="toggleNFZ('port')"><div class="fb-dot" style="background:#607d8b;"></div>商港</div>
   </div>
@@ -289,10 +287,8 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
   <div style="margin:10px 16px 0;background:var(--card);backdrop-filter:blur(12px);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:10px;color:var(--w55);margin-bottom:8px;letter-spacing:0.06em;text-transform:uppercase;">圖例</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
-      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#e82127;flex-shrink:0;"></div>機場禁飛區</div>
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff4f41;flex-shrink:0;"></div>縣市紅區</div>
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff9f0a;flex-shrink:0;"></div>縣市黃區</div>
-      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff6d00;flex-shrink:0;"></div>RCR 限航區</div>
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#888;flex-shrink:0;"></div>國家公園</div>
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#607d8b;flex-shrink:0;"></div>商港</div>
     </div>
@@ -1071,8 +1067,8 @@ async function queryFlight(){
 // CONTACTS SEARCH
 // ══ 禁限航區地圖 ══
 let nfzMap = null;
-const nfzLayers = { airport: null, county_red: null, county_yellow: null, rcr: null, park: null, port: null };
-const nfzFilters = { airport: true, county_red: true, county_yellow: true, rcr: true, park: true, port: true };
+const nfzLayers = { county_red: null, county_yellow: null, park: null, port: null };
+const nfzFilters = { county_red: true, county_yellow: true, park: true, port: true };
 
 // 台灣主要機場座標與資訊
 const AIRPORTS_NFZ = [
@@ -1133,11 +1129,11 @@ function initNFZMap() {
   // 載入民航局所有圖層
   const BASE = 'https://raw.githubusercontent.com/songmatin/kardo-tools/main/';
   const LAYERS = [
-    { file: 'nfz.geojson',             type: 'no_fly',   color: '#e82127', label: '🚫 機場禁飛區', layer: 'airport' },
+    // nfz.geojson 移除（縣市紅區已包含）
     // county.geojson 是縣市行政邊界，不是個別禁飛點，移除
     { file: 'national_park.geojson',   type: 'park',     color: '#888888', label: '🏞️ 國家公園', layer: 'park' },
     { file: 'commercial_port.geojson', type: 'port',     color: '#607d8b', label: '⚓ 商港', layer: 'port' },
-    { file: 'kinmen_matsu.geojson',    type: 'rcr',      color: '#ff6d00', label: '⚠️ RCR 限航區', layer: 'rcr' },
+    // kinmen_matsu.geojson 移除（縣市紅黃區已包含）
     // temporary 單獨處理
   ];
 
