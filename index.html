@@ -1105,94 +1105,85 @@ function initNFZMap() {
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }).addTo(nfzMap);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 18, opacity: 0.9 }).addTo(nfzMap);
 
-  // 初始化所有圖層群組
-  Object.keys(nfzLayers).forEach(k => { nfzLayers[k] = L.layerGroup().addTo(nfzMap); });
+  Object.keys(nfzLayers).forEach(k => {
+    nfzLayers[k] = L.layerGroup().addTo(nfzMap);
+  });
 
   const BASE = 'https://raw.githubusercontent.com/songmatin/kardo-tools/main/';
 
-  // ── 舊 nfz.geojson：依 zone_type 分流到 airport / rcr ──
-  fetch(BASE + 'nfz.geojson').then(r => r.json()).then(data => {
-    data.features.forEach(f => {
-      const p = f.properties || {};
-      const t = p.zone_type || 'restrict';
-      const isAirport = t === 'no_fly';
-      const color = isAirport ? '#ff4f41' : '#8B0000';
-      const key   = isAirport ? 'airport' : 'rcr';
-      const label = isAirport ? '🚫 機場禁飛區' : '⛔ RCR限制區';
-      const lyr = L.geoJSON(f, { style: { color, fillColor: color, fillOpacity: isAirport ? 0.18 : 0.2, weight: 1.5, dashArray: isAirport ? null : '5,4' } });
-      lyr.bindPopup(`<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${p.name || label}</div><div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:${color}30;color:${color};">${label}</div>`);
-      nfzLayers[key].addLayer(lyr);
-    });
-    console.log('nfz.geojson 載入完成');
-  }).catch(e => console.error('nfz.geojson 失敗:', e));
-
-  // ── county.geojson：依 restrict_lv 分紅區 / 黃區 ──
-  // 民航局 county 資料：紅區通常是完全禁止，黃區是有條件限制
-  // 用 zone_type 或 color 欄位分流，若無則全歸黃區
-  fetch(BASE + 'county.geojson').then(r => r.json()).then(data => {
-    data.features.forEach(f => {
-      const p = f.properties || {};
-      // 判斷紅區/黃區：_color 欄位是我們自己塞的，但 county 原始資料可能有 restrict_lv 或 zone_type
-      const isRed = (p.zone_type === 'no_fly') || (p.restrict_lv === 'red') || (p._color && p._color.toLowerCase().includes('ff0000')) || (p.FLTLVL === '禁止');
-      const color = isRed ? '#ff4f41' : '#FFD700';
-      const key   = isRed ? 'cred' : 'county';
-      const label = isRed ? '🚫 縣市紅區' : '🟡 縣市黃區';
-      const lyr = L.geoJSON(f, { style: { color, fillColor: color, fillOpacity: 0.15, weight: 1.5, dashArray: '5,4' } });
-      const name = p.name || p.Name || p.NAME || p.CITY || label;
-      lyr.bindPopup(`<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div><div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:${color}30;color:${color};">${label}</div>`);
-      nfzLayers[key].addLayer(lyr);
-    });
-    console.log('county.geojson 載入完成');
-  }).catch(e => console.error('county.geojson 失敗:', e));
-
-  // ── 其餘圖層 ──
-  const SIMPLE = [
-    { key:'park',   file:'national_park.geojson',   color:'#228B22', fill:0.15, dash:'5,4', label:'🏞️ 國家公園' },
-    { key:'port',   file:'commercial_port.geojson',  color:'#0066CC', fill:0.18, dash:'5,4', label:'⚓ 商港' },
-    { key:'kinmen', file:'kinmen_matsu.geojson',     color:'#FF6600', fill:0.18, dash:'5,4', label:'🏝️ 金馬地區' },
-    { key:'temp',   file:'temporary.geojson',        color:'#CC0000', fill:0.22, dash:null,  label:'🔴 臨時禁限航區' },
-  ];
-  SIMPLE.forEach(cfg => {
-    fetch(BASE + cfg.file).then(r => r.json()).then(data => {
+  // nfz.geojson — 原本邏輯完全保留，只改 restrict 的 key 名稱為 rcr
+  fetch(BASE + 'nfz.geojson')
+    .then(r => r.json())
+    .then(data => {
       data.features.forEach(f => {
         const p = f.properties || {};
-        const name = p.name || p.Name || p.NAME || p._label || cfg.label;
-        const lyr = L.geoJSON(f, { style: { color: cfg.color, fillColor: cfg.color, fillOpacity: cfg.fill, weight: 1.5, dashArray: cfg.dash } });
-        lyr.bindPopup(`<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div><div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:${cfg.color}30;color:${cfg.color};">${cfg.label}</div>`);
-        nfzLayers[cfg.key].addLayer(lyr);
+        const color = p.color || '#ff9f0a';
+        const type = p.zone_type || 'restrict';
+        const key = type === 'no_fly' ? 'airport' : type === 'park' ? 'park' : 'rcr';
+        const label = key === 'airport' ? '🚫 機場禁飛區' : key === 'park' ? '🏞️ 國家公園' : '⛔ RCR限制區';
+        const useColor = key === 'airport' ? '#ff4f41' : key === 'park' ? '#888888' : '#8B0000';
+        const layer = L.geoJSON(f, {
+          style: {
+            color: useColor, fillColor: useColor,
+            fillOpacity: 0.2, weight: 1.5,
+            dashArray: key === 'airport' ? null : '5,4',
+          }
+        });
+        layer.bindPopup(
+          `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${p.name || label}</div>` +
+          `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:${useColor}30;color:${useColor};">${label}</div>`
+        );
+        nfzLayers[key].addLayer(layer);
       });
-      console.log(cfg.file, '載入完成:', data.features.length, '筆');
-    }).catch(e => console.error(cfg.file, '失敗:', e));
+      console.log('nfz.geojson 載入完成:', data.features.length, '筆');
+    })
+    .catch(e => console.error('nfz.geojson 失敗:', e));
+
+  // county.geojson — 全部先歸黃區，之後確認欄位再分紅區
+  fetch(BASE + 'county.geojson')
+    .then(r => r.json())
+    .then(data => {
+      data.features.forEach(f => {
+        const p = f.properties || {};
+        const name = p.name || p.Name || p.NAME || p.CITY || '縣市管制區';
+        const layer = L.geoJSON(f, {
+          style: { color:'#FFD700', fillColor:'#FFD700', fillOpacity:0.15, weight:1.5, dashArray:'5,4' }
+        });
+        layer.bindPopup(
+          `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div>` +
+          `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:#FFD70030;color:#FFD700;">🟡 縣市黃區</div>`
+        );
+        nfzLayers['county'].addLayer(layer);
+      });
+      console.log('county.geojson 載入完成:', data.features.length, '筆');
+    })
+    .catch(e => console.error('county.geojson 失敗:', e));
+
+  // 其餘圖層
+  const SIMPLE = [
+    { key:'park',   file:'national_park.geojson',  color:'#228B22', fill:0.15, dash:'5,4', label:'🏞️ 國家公園' },
+    { key:'port',   file:'commercial_port.geojson', color:'#0066CC', fill:0.18, dash:'5,4', label:'⚓ 商港' },
+    { key:'kinmen', file:'kinmen_matsu.geojson',    color:'#FF6600', fill:0.18, dash:'5,4', label:'🏝️ 金馬地區' },
+    { key:'temp',   file:'temporary.geojson',       color:'#CC0000', fill:0.22, dash:null,  label:'🔴 臨時禁限航區' },
+  ];
+  SIMPLE.forEach(cfg => {
+    fetch(BASE + cfg.file)
+      .then(r => r.json())
+      .then(data => {
+        data.features.forEach(f => {
+          const p = f.properties || {};
+          const name = p.name || p.Name || p.NAME || p._label || cfg.label;
+          const layer = L.geoJSON(f, {
+            style: { color:cfg.color, fillColor:cfg.color, fillOpacity:cfg.fill, weight:1.5, dashArray:cfg.dash }
+          });
+          layer.bindPopup(
+            `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div>` +
+            `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:${cfg.color}30;color:${cfg.color};">${cfg.label}</div>`
+          );
+          nfzLayers[cfg.key].addLayer(layer);
+        });
+        console.log(cfg.file, '載入完成:', data.features.length, '筆');
+      })
+      .catch(e => console.error(cfg.file, '失敗:', e));
   });
 }
-
-function toggleNFZ(k) {
-  nfzFilters[k] = !nfzFilters[k];
-  document.getElementById('nfz-' + k).classList.toggle('on', nfzFilters[k]);
-  if (nfzLayers[k]) {
-    if (nfzFilters[k]) nfzMap.addLayer(nfzLayers[k]);
-    else nfzMap.removeLayer(nfzLayers[k]);
-  }
-}
-
-function locateNFZ() {
-  if (!navigator.geolocation) { alert('不支援定位'); return; }
-  navigator.geolocation.getCurrentPosition(p => {
-    const { latitude: lat, longitude: lng } = p.coords;
-    nfzMap.setView([lat, lng], 14);
-    L.circleMarker([lat, lng], {
-      radius: 10, color: '#50a0ff', fillColor: '#50a0ff', fillOpacity: 1, weight: 2
-    }).addTo(nfzMap).bindPopup('📍 您的位置').openPopup();
-  }, () => alert('無法取得位置'));
-}
-function filterContacts(){
-  const q=document.getElementById('contact-search').value.toLowerCase();
-  document.querySelectorAll('.contact-item').forEach(el=>{
-    el.style.display=el.querySelector('.contact-city').textContent.toLowerCase().includes(q)?'':'none';
-  });
-}
-
-function fmtT(d){if(!d)return'—';return d.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false});}
-function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-</script>
-</body></html>
