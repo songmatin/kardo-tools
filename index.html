@@ -311,9 +311,13 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
 <div class="page" id="p-weather">
   <div class="ph" style="padding-bottom:10px;"><div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><circle cx="14" cy="14" r="5.5"/><path d="M14 2v3M14 23v3M2 14h3M23 14h3M5.8 5.8l2.1 2.1M20.1 20.1l2.1 2.1M5.8 22.2l2.1-2.1M20.1 7.9l2.1-2.1"/></svg></div><div class="ph-title">飛行天氣</div><div class="ph-sub">輸入地址或定位查詢</div></div>
   <div class="search-row">
-    <input class="s-input" id="w-search" placeholder="輸入地址或城市名稱…" onkeydown="if(event.key==='Enter')searchWeather()">
+    <input class="s-input" id="w-search" placeholder="地名、座標或 Plus Code…" onkeydown="if(event.key==='Enter')searchWeather()">
     <button class="loc-btn" onclick="locWeather()"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="9" r="3.5"/><path d="M9 1v2M9 15v2M1 9h2M15 9h2"/></svg></button>
     <button class="s-btn" onclick="searchWeather()">查詢</button>
+  </div>
+  <div id="w-location-label" style="display:none;margin:0 16px 8px;display:flex;align-items:center;gap:6px;">
+    <svg viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" style="width:12px;height:12px;flex-shrink:0;"><circle cx="8" cy="6.5" r="2.5"/><path d="M8 1C5.2 1 3 3.2 3 6c0 3.5 5 9 5 9s5-5.5 5-9c0-2.8-2.2-5-5-5z"/></svg>
+    <span id="w-location-name" style="font-size:12px;color:var(--w70);"></span>
   </div>
   <div id="w-result"><div class="state-box"><div class="state-emoji">🌤</div><div class="state-title">查詢飛行天氣</div><div class="state-sub">輸入地址或點擊定位</div></div></div>
 </div>
@@ -866,13 +870,23 @@ async function queryNotam(){
 // WEATHER
 function locWeather(){
   if(!navigator.geolocation){alert('不支援定位');return;}
-  navigator.geolocation.getCurrentPosition(p=>fetchWeather(p.coords.latitude,p.coords.longitude,'目前位置'),()=>alert('無法取得位置'));
+  navigator.geolocation.getCurrentPosition(p=>fetchWeather(p.coords.latitude,p.coords.longitude,''),()=>alert('無法取得位置'));
 }
 async function searchWeather(){
   const q=document.getElementById('w-search').value.trim();
   if(!q)return;
+  // 先試座標解析
+  const coords=parseCoords(q);
+  if(coords){fetchWeather(coords.lat,coords.lng,q);return;}
+  // Plus Code
+  if(isPlusCode(q)){
+    try{
+      const pc=await decodePlusCode(q);
+      if(pc){fetchWeather(pc.lat,pc.lng,q);return;}
+    }catch(e){}
+  }
+  // Nominatim 中英文地名
   try{
-    // 用 Nominatim 搜尋中文地名
     const r=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&countrycodes=tw&limit=1&format=json',{
       headers:{'Accept-Language':'zh-TW,zh','User-Agent':'KardoAerialTools/1.0'}
     });
@@ -882,6 +896,26 @@ async function searchWeather(){
   }catch(e){alert('查詢失敗，請確認網路連線');}
 }
 async function fetchWeather(lat,lng,label){
+  // 顯示位置名稱
+  const locLabel=document.getElementById('w-location-label');
+  const locName=document.getElementById('w-location-name');
+  if(locLabel&&locName){
+    locLabel.style.display='flex';
+    locName.textContent=label||'目前位置';
+    // 如果 label 是座標或 Plus Code，用 Nominatim 反查地名
+    if(!label||/^[\d\-°'"NSEW,\s]+$/.test(label)||isPlusCode(label)){
+      try{
+        const r=await fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json&accept-language=zh-TW',{
+          headers:{'User-Agent':'KardoAerialTools/1.0'}
+        });
+        const d=await r.json();
+        if(d&&d.display_name){
+          const parts=d.display_name.split(',');
+          locName.textContent=parts.slice(0,3).join('，').trim();
+        }
+      }catch(e){}
+    }
+  }
   document.getElementById('w-result').innerHTML='<div class="spin-wrap"><div class="spinner"></div><div class="spin-txt">取得天氣資料中…</div></div>';
   try{
     const[cur,fc]=await Promise.all([
@@ -920,12 +954,12 @@ async function fetchWeather(lat,lng,label){
     // 機體抗風參考表
     const maxWs=parseFloat((ws*1.5).toFixed(1));
     const droneRef=[
-      {cat:'里卡豆好帥', name:'Inspire 3',    limit:14, bf:7,},
-      {cat:'里卡豆好帥', name:'Mavic 4 Pro',  limit:12, bf:6,},
-      {cat:'里卡豆好帥', name:'Air 3S',       limit:12, bf:6,},
-      {cat:'里卡豆好帥', name:'Avata 360',    limit:10.7,bf:5,},
-      {cat:'里卡豆好帥', name:'Mini 4 Pro',   limit:10.7,bf:5,},
-      {cat:'里卡豆好帥',name:'Neo 2',        limit:10.7,bf:5,},
+      {cat:'專業影視', name:'Inspire 3',    limit:14, bf:7,  note:'動力冗餘最高，高空穩定性極強'},
+      {cat:'旗艦航拍', name:'Mavic 4 Pro',  limit:12, bf:6,  note:'消費級天花板，風中姿態修正速度快'},
+      {cat:'進階航拍', name:'Air 3S',       limit:12, bf:6,  note:'重量較 Mavic 輕，但動力調教相同'},
+      {cat:'全景 FPV', name:'Avata 360',    limit:10.7,bf:5, note:'機身較寬，側風對拼接畫面影響顯著'},
+      {cat:'迷你旗艦', name:'Mini 4 Pro',   limit:10.7,bf:5, note:'受限於 249g 物理質量，高空易飄移'},
+      {cat:'掌上 VLOG',name:'Neo 2',        limit:10.7,bf:5, note:''},
     ];
     let dt='<div style="margin:10px 16px 0;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">';
     dt+='<div style="font-size:10px;color:var(--w55);margin-bottom:10px;letter-spacing:0.06em;text-transform:uppercase;">機體抗風極限參考</div>';
