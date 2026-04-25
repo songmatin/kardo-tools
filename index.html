@@ -918,6 +918,7 @@ async function fetchWeather(lat,lng,label){
       '</div>';});
 
     // 機體抗風參考表
+    const maxWs=parseFloat((ws*1.5).toFixed(1));
     const droneRef=[
       {cat:'專業影視', name:'Inspire 3',    limit:14, bf:7,  note:'動力冗餘最高，高空穩定性極強'},
       {cat:'旗艦航拍', name:'Mavic 4 Pro',  limit:12, bf:6,  note:'消費級天花板，風中姿態修正速度快'},
