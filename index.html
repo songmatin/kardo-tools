@@ -274,14 +274,19 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
   <div class="ph" style="padding-bottom:10px;">
     <div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><circle cx="14" cy="14" r="10.5"/><path d="M6.5 6.5l15 15"/></svg></div>
     <div class="ph-title">禁限航區查詢</div>
-    <div class="ph-sub">台灣主要機場禁飛範圍 · 點選圖示查看詳情</div>
+    <div class="ph-sub">點選區域查看詳情 · 支援地址與座標搜尋</div>
+  </div>
+  <div class="search-row">
+    <input class="s-input" id="nfz-search" placeholder="地址、地名或座標（24.154046, 120.645423）…" onkeydown="if(event.key==='Enter')searchNFZ()">
+    <button class="loc-btn" onclick="locateNFZ()"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="9" r="3.5"/><path d="M9 1v2M9 15v2M1 9h2M15 9h2"/></svg></button>
+    <button class="s-btn" onclick="searchNFZ()">搜尋</button>
   </div>
   <!-- 圖層切換 -->
   <div class="filter-bar">
     <div class="fb on" id="nfz-county_red" onclick="toggleNFZ('county_red')"><div class="fb-dot" style="background:#ff4f41;"></div>縣市紅區</div>
     <div class="fb on" id="nfz-county_yellow" onclick="toggleNFZ('county_yellow')"><div class="fb-dot" style="background:#ff9f0a;"></div>縣市黃區</div>
     <div class="fb on" id="nfz-park" onclick="toggleNFZ('park')"><div class="fb-dot" style="background:#888;"></div>國家公園</div>
-    <div class="fb on" id="nfz-port" onclick="toggleNFZ('port')"><div class="fb-dot" style="background:#607d8b;"></div>商港</div>
+    <div class="fb on" id="nfz-port" onclick="toggleNFZ('port')"><div class="fb-dot" style="background:#2196f3;"></div>商港</div>
   </div>
   <div id="nfz-map" style="height:60vh;margin:0 16px;border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border);"></div>
   <div style="margin:10px 16px 0;background:var(--card);backdrop-filter:blur(12px);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
@@ -290,7 +295,7 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff4f41;flex-shrink:0;"></div>縣市紅區</div>
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff9f0a;flex-shrink:0;"></div>縣市黃區</div>
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#888;flex-shrink:0;"></div>國家公園</div>
-      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#607d8b;flex-shrink:0;"></div>商港</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#2196f3;flex-shrink:0;"></div>商港</div>
     </div>
   </div>
   <button class="q-btn" onclick="locateNFZ()" style="margin-top:10px;">
@@ -1132,7 +1137,7 @@ function initNFZMap() {
     // nfz.geojson 移除（縣市紅區已包含）
     // county.geojson 是縣市行政邊界，不是個別禁飛點，移除
     { file: 'national_park.geojson',   type: 'park',     color: '#888888', label: '🏞️ 國家公園', layer: 'park' },
-    { file: 'commercial_port.geojson', type: 'port',     color: '#607d8b', label: '⚓ 商港', layer: 'port' },
+    { file: 'commercial_port.geojson', type: 'port',     color: '#2196f3', label: '⚓ 商港', layer: 'port' },
     // kinmen_matsu.geojson 移除（縣市紅黃區已包含）
     // temporary 單獨處理
   ];
@@ -1282,6 +1287,47 @@ function toggleNFZ(k) {
     if (nfzFilters[k]) nfzMap.addLayer(nfzLayers[k]);
     else nfzMap.removeLayer(nfzLayers[k]);
   }
+}
+
+function parseCoords(input) {
+  // 十進制：24.154046, 120.645423
+  const dec = input.match(/(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)/);
+  if (dec) return { lat: parseFloat(dec[1]), lng: parseFloat(dec[2]) };
+  // DMS：24°09'14.6"N 120°38'43.5"E
+  const dms = input.match(/(\d+)°(\d+)'([\d.]+)"([NS])\s*(\d+)°(\d+)'([\d.]+)"([EW])/i);
+  if (dms) {
+    const lat = (parseFloat(dms[1]) + parseFloat(dms[2])/60 + parseFloat(dms[3])/3600) * (dms[4].toUpperCase()==='S'?-1:1);
+    const lng = (parseFloat(dms[5]) + parseFloat(dms[6])/60 + parseFloat(dms[7])/3600) * (dms[8].toUpperCase()==='W'?-1:1);
+    return { lat, lng };
+  }
+  return null;
+}
+
+async function searchNFZ() {
+  const q = document.getElementById('nfz-search').value.trim();
+  if (!q) return;
+  // 先嘗試解析座標
+  const coords = parseCoords(q);
+  if (coords) {
+    nfzMap.setView([coords.lat, coords.lng], 16);
+    L.circleMarker([coords.lat, coords.lng], {
+      radius: 10, color: 'var(--accent)', fillColor: 'var(--accent)', fillOpacity: 1, weight: 2
+    }).addTo(nfzMap).bindPopup(`📍 ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`).openPopup();
+    return;
+  }
+  // 用 Nominatim 搜尋地址/地名
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&countrycodes=tw&limit=1&format=json`, {
+      headers: { 'Accept-Language': 'zh-TW,zh', 'User-Agent': 'KardoAerialTools/1.0' }
+    });
+    const data = await r.json();
+    if (!data.length) { alert('找不到此地點'); return; }
+    const { lat, lon, display_name } = data[0];
+    nfzMap.setView([parseFloat(lat), parseFloat(lon)], 16);
+    L.circleMarker([parseFloat(lat), parseFloat(lon)], {
+      radius: 10, color: 'var(--accent)', fillColor: 'var(--accent)', fillOpacity: 1, weight: 2
+    }).addTo(nfzMap).bindPopup(`📍 ${display_name}`).openPopup();
+  } catch(e) { alert('搜尋失敗，請稍後再試'); }
 }
 
 function locateNFZ() {
