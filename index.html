@@ -272,7 +272,7 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
 <!-- 禁限航區 - Leaflet 地圖版 -->
 <div class="page" id="p-notam">
   <div class="ph" style="padding-bottom:10px;">
-    <div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><circle cx="14" cy="14" r="11"/><path d="M7 7l14 14"/></svg></div>
+    <div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><circle cx="14" cy="14" r="10.5"/><path d="M6.5 6.5l15 15"/></svg></div>
     <div class="ph-title">禁限航區查詢</div>
     <div class="ph-sub">台灣主要機場禁飛範圍 · 點選圖示查看詳情</div>
   </div>
@@ -303,7 +303,7 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
 
 <!-- WEATHER -->
 <div class="page" id="p-weather">
-  <div class="ph" style="padding-bottom:10px;"><div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><path d="M6 18a5 5 0 0 1 4.5-5H11a4.5 4.5 0 0 1 9 .5A4 4 0 0 1 17 22H7a4 4 0 0 1-1-4"/><path d="M14 4V2M19.5 6.5l1-1M22 13h2"/></svg></div><div class="ph-title">飛行天氣</div><div class="ph-sub">輸入地址或定位查詢</div></div>
+  <div class="ph" style="padding-bottom:10px;"><div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><circle cx="14" cy="14" r="5.5"/><path d="M14 2v3M14 23v3M2 14h3M23 14h3M5.8 5.8l2.1 2.1M20.1 20.1l2.1 2.1M5.8 22.2l2.1-2.1M20.1 7.9l2.1-2.1"/></svg></div><div class="ph-title">飛行天氣</div><div class="ph-sub">輸入地址或定位查詢</div></div>
   <div class="search-row">
     <input class="s-input" id="w-search" placeholder="輸入地址或城市名稱…" onkeydown="if(event.key==='Enter')searchWeather()">
     <button class="loc-btn" onclick="locWeather()"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="9" r="3.5"/><path d="M9 1v2M9 15v2M1 9h2M15 9h2"/></svg></button>
@@ -314,11 +314,13 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
 
 <!-- MAP -->
 <div class="page" id="p-map">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0;">
-    <div>
-      <div style="font-family:var(--serif);font-size:20px;margin-bottom:2px;">充電站 · 廁所</div>
-      <div style="font-size:11px;color:var(--w55);">點選圖示查看詳情</div>
-    </div>
+  <div class="ph" style="padding-bottom:10px;">
+    <div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="8" width="20" height="12" rx="2"/><path d="M23 12v4"/><path d="M13 6.5L9 14h5.5l-4 8"/></svg></div>
+    <div class="ph-title">休息補給站</div>
+    <div class="ph-sub">充電站 · 廁所 · 便利商店</div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;">
+    <div></div>
     <button onclick="locateMap()" style="display:flex;align-items:center;gap:7px;background:var(--accent);color:var(--dark);border:none;border-radius:20px;padding:10px 16px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 3px 12px rgba(184,150,90,0.35);-webkit-tap-highlight-color:transparent;flex-shrink:0;">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" width="15" height="15"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
       定位
@@ -351,7 +353,7 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
 
 <!-- FLIGHT -->
 <div class="page" id="p-flight">
-  <div class="ph" style="padding-bottom:10px;"><div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><path d="M24 10l-7-7-2 4-8-1 4 4-1 7 5-3 5 3-1-5 5-3z"/></svg></div><div class="ph-title">航班空檔監控</div><div class="ph-sub">選擇機場查看起降間隔</div></div>
+  <div class="ph" style="padding-bottom:10px;"><div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6c.7.7.7 1.6 0 2.3l-4.7 4.7 2.3 8.1-2.3 2.3-3.5-7-3.5 3.5v2.3l-2.3 1.2-1.2-3.5-3.5-1.2 1.2-2.3h2.3l3.5-3.5-7-3.5 2.3-2.3 8.1 2.3 4.7-4.7c.7-.7 1.6-.7 2.3 0z"/><line x1="2" y1="26" x2="9" y2="26"/></svg></div><div class="ph-title">航班空檔監控</div><div class="ph-sub">選擇機場查看起降間隔</div></div>
   <div class="gc-title">選擇機場</div>
   <div class="fap-grid" id="fap-grid"></div>
   <button class="q-btn" id="flight-btn" onclick="queryFlight()" style="margin-top:10px;">
@@ -363,7 +365,7 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
 
 <!-- AIRSPACE -->
 <div class="page" id="p-airspace">
-  <div class="ph"><div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="22" height="22" rx="3"/><path d="M3 10h22M3 18h22M10 3v22"/></svg></div><div class="ph-title">禁限航區</div><div class="ph-sub">民航局遙控無人機管理資訊系統</div></div>
+  <div class="ph"><div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><circle cx="14" cy="14" r="10.5"/><path d="M6.5 6.5l15 15"/></svg></div><div class="ph-title">禁限航區</div><div class="ph-sub">民航局遙控無人機管理資訊系統</div></div>
   <div style="margin:0 16px;border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border);"><iframe src="https://drone.caa.gov.tw/Default/WebGuide" style="width:100%;height:65vh;border:none;display:block;" title="禁限航區"></iframe></div>
   <div class="disc">資料來源：交通部民用航空局</div>
 </div><!-- /p-airspace -->
@@ -1131,7 +1133,7 @@ function initNFZMap() {
     { file: 'national_park.geojson',   type: 'park',     color: '#888888', label: '🏞️ 國家公園' },
     { file: 'commercial_port.geojson', type: 'park',     color: '#607d8b', label: '⚓ 商港' },
     { file: 'kinmen_matsu.geojson',    type: 'restrict', color: '#ff9f0a', label: '⚠️ 金馬限制區' },
-    { file: 'temporary.geojson',       type: 'restrict', color: '#e040fb', label: '⏱️ 臨時限制區' },
+    // temporary 單獨處理
   ];
 
   LAYERS.forEach(({ file, type, color, label }) => {
@@ -1162,6 +1164,37 @@ function initNFZMap() {
       })
       .catch(e => console.error(`❌ ${file}:`, e));
   });
+
+  // temporary.geojson — 依空域顏色分流
+  fetch(BASE + 'temporary.geojson')
+    .then(r => r.json())
+    .then(data => {
+      data.features.forEach(f => {
+        const p = f.properties || {};
+        const isRed = p['空域顏色'] === '紅區' || p['限制區'] === '紅區';
+        const color = isRed ? '#ff4f41' : '#ff9f0a';
+        const label = isRed ? '🚫 縣市禁飛區' : '⚠️ 臨時限制區';
+        const name = p['空域名稱'] || p['name'] || label;
+        const desc = p['空域說明'] || p['說明'] || '';
+        const layer = L.geoJSON(f, {
+          style: {
+            color, fillColor: color,
+            fillOpacity: isRed ? 0.25 : 0.15,
+            weight: isRed ? 2 : 1.5,
+            dashArray: isRed ? null : '5,4'
+          }
+        });
+        layer.bindPopup(
+          `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div>` +
+          `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:${desc?'6':'0'}px;background:${color}30;color:${color};">${label}</div>` +
+          (desc ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>` : '')
+        );
+        if (isRed) nfzLayers.airport.addLayer(layer);
+        else nfzLayers.restrict.addLayer(layer);
+      });
+      console.log('✅ temporary.geojson:', data.features.length, '筆');
+    })
+    .catch(e => console.error('❌ temporary.geojson:', e));
 }
 
 function toggleNFZ(k) {
