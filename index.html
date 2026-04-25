@@ -872,11 +872,14 @@ async function searchWeather(){
   const q=document.getElementById('w-search').value.trim();
   if(!q)return;
   try{
-    const r=await fetch('https://api.openweathermap.org/geo/1.0/direct?q='+encodeURIComponent(q)+'&limit=1&appid='+OWM);
+    // 用 Nominatim 搜尋中文地名
+    const r=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&countrycodes=tw&limit=1&format=json',{
+      headers:{'Accept-Language':'zh-TW,zh','User-Agent':'KardoAerialTools/1.0'}
+    });
     const d=await r.json();
     if(!d.length){alert('找不到此地點');return;}
-    fetchWeather(d[0].lat,d[0].lon,d[0].local_names&&d[0].local_names.zh||d[0].name);
-  }catch(e){alert('查詢失敗');}
+    fetchWeather(parseFloat(d[0].lat),parseFloat(d[0].lon),q);
+  }catch(e){alert('查詢失敗，請確認網路連線');}
 }
 async function fetchWeather(lat,lng,label){
   document.getElementById('w-result').innerHTML='<div class="spin-wrap"><div class="spinner"></div><div class="spin-txt">取得天氣資料中…</div></div>';
