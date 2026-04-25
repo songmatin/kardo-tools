@@ -1195,6 +1195,83 @@ function initNFZMap() {
       console.log('✅ temporary.geojson:', data.features.length, '筆');
     })
     .catch(e => console.error('❌ temporary.geojson:', e));
+
+  // uav_red.geojson — 縣市紅區（學校/政府/法院等）
+  fetch(BASE + 'uav_red.geojson')
+    .then(r => r.json())
+    .then(data => {
+      data.features.forEach(f => {
+        const p = f.properties || {};
+        const name = p['空域名稱'] || p['name'] || p['NAME'] || '縣市紅區';
+        const desc = p['空域說明'] || p['條件說明'] || '';
+        const color = '#ff4f41';
+        const layer = L.geoJSON(f, {
+          style: { color, fillColor: color, fillOpacity: 0.22, weight: 1.5 }
+        });
+        layer.bindPopup(
+          `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div>` +
+          `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:${desc?'6':'0'}px;background:${color}30;color:${color};">🚫 縣市禁飛紅區</div>` +
+          (desc ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>` : '')
+        );
+        nfzLayers.airport.addLayer(layer);
+      });
+      console.log('✅ uav_red.geojson:', data.features.length, '筆');
+    })
+    .catch(e => console.error('❌ uav_red.geojson:', e));
+
+  // uav_yellow.geojson — 縣市黃區
+  fetch(BASE + 'uav_yellow.geojson')
+    .then(r => r.json())
+    .then(data => {
+      data.features.forEach(f => {
+        const p = f.properties || {};
+        const name = p['空域名稱'] || p['name'] || p['NAME'] || '縣市黃區';
+        const desc = p['空域說明'] || p['條件說明'] || '';
+        const color = '#ff9f0a';
+        const layer = L.geoJSON(f, {
+          style: { color, fillColor: color, fillOpacity: 0.15, weight: 1.5, dashArray: '5,4' }
+        });
+        layer.bindPopup(
+          `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div>` +
+          `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:${desc?'6':'0'}px;background:${color}30;color:${color};">⚠️ 縣市限制黃區</div>` +
+          (desc ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>` : '')
+        );
+        nfzLayers.restrict.addLayer(layer);
+      });
+      console.log('✅ uav_yellow.geojson:', data.features.length, '筆');
+    })
+    .catch(e => console.error('❌ uav_yellow.geojson:', e));
+
+  // uav_ry.geojson — 縣市紅黃混合區
+  fetch(BASE + 'uav_ry.geojson')
+    .then(r => r.json())
+    .then(data => {
+      data.features.forEach(f => {
+        const p = f.properties || {};
+        const isRed = p['空域顏色'] === '紅區' || p['限制區'] === '紅區';
+        const color = isRed ? '#ff4f41' : '#ff9f0a';
+        const label = isRed ? '🚫 縣市禁飛紅區' : '⚠️ 縣市限制黃區';
+        const name = p['空域名稱'] || p['name'] || p['NAME'] || label;
+        const desc = p['空域說明'] || p['條件說明'] || '';
+        const layer = L.geoJSON(f, {
+          style: {
+            color, fillColor: color,
+            fillOpacity: isRed ? 0.22 : 0.15,
+            weight: 1.5,
+            dashArray: isRed ? null : '5,4'
+          }
+        });
+        layer.bindPopup(
+          `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div>` +
+          `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:${desc?'6':'0'}px;background:${color}30;color:${color};">${label}</div>` +
+          (desc ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>` : '')
+        );
+        if (isRed) nfzLayers.airport.addLayer(layer);
+        else nfzLayers.restrict.addLayer(layer);
+      });
+      console.log('✅ uav_ry.geojson:', data.features.length, '筆');
+    })
+    .catch(e => console.error('❌ uav_ry.geojson:', e));
 }
 
 function toggleNFZ(k) {
