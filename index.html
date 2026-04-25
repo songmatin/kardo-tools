@@ -277,16 +277,21 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
     <div class="ph-sub">台灣主要機場禁飛範圍 · 點選圖示查看詳情</div>
   </div>
   <!-- 圖層切換 -->
-<div class="filter-bar">
-  <div class="fb on" id="nfz-airport" onclick="toggleNFZ('airport')"><div class="fb-dot" style="background:#ff4f41;"></div>機場禁飛區</div>
-  <div class="fb on" id="nfz-rcr"     onclick="toggleNFZ('rcr')"   ><div class="fb-dot" style="background:#8B0000;"></div>RCR限制區</div>
-  <div class="fb on" id="nfz-cred"    onclick="toggleNFZ('cred')"  ><div class="fb-dot" style="background:#ff4f41;"></div>縣市紅區</div>
-  <div class="fb on" id="nfz-county"  onclick="toggleNFZ('county')"><div class="fb-dot" style="background:#FFD700;"></div>縣市黃區</div>
-  <div class="fb on" id="nfz-park"    onclick="toggleNFZ('park')"  ><div class="fb-dot" style="background:#228B22;"></div>國家公園</div>
-  <div class="fb on" id="nfz-port"    onclick="toggleNFZ('port')"  ><div class="fb-dot" style="background:#0066CC;"></div>商港</div>
-  <div class="fb on" id="nfz-kinmen"  onclick="toggleNFZ('kinmen')"><div class="fb-dot" style="background:#FF6600;"></div>金馬地區</div>
-  <div class="fb on" id="nfz-temp"    onclick="toggleNFZ('temp')"  ><div class="fb-dot" style="background:#CC0000;"></div>臨時禁限航</div>
-</div>
+  <div class="filter-bar">
+    <div class="fb on" id="nfz-airport" onclick="toggleNFZ('airport')"><div class="fb-dot" style="background:#ff4f41;"></div>機場禁飛區</div>
+    <div class="fb on" id="nfz-restrict" onclick="toggleNFZ('restrict')"><div class="fb-dot" style="background:#ff9f0a;"></div>限制區</div>
+    <div class="fb on" id="nfz-park" onclick="toggleNFZ('park')"><div class="fb-dot" style="background:#888;"></div>國家公園</div>
+  </div>
+  <div id="nfz-map" style="height:60vh;margin:0 16px;border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border);"></div>
+  <div style="margin:10px 16px 0;background:var(--card);backdrop-filter:blur(12px);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
+    <div style="font-size:10px;color:var(--w55);margin-bottom:8px;letter-spacing:0.06em;text-transform:uppercase;">圖例</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff4f41;flex-shrink:0;"></div>機場禁飛（5.6km）</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff9f0a;flex-shrink:0;"></div>限制區</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#888;flex-shrink:0;"></div>國家公園</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:2px;background:#50a0ff;flex-shrink:0;"></div>您的位置</div>
+    </div>
+  </div>
   <button class="q-btn" onclick="locateNFZ()" style="margin-top:10px;">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>定位我的位置
   </button>
@@ -295,6 +300,7 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
   </div>
   <div class="disc">資料來源：民航局公告 · OpenStreetMap · 僅供參考</div>
 </div>
+
 <!-- WEATHER -->
 <div class="page" id="p-weather">
   <div class="ph" style="padding-bottom:10px;"><div class="ph-icon"><svg viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><path d="M6 18a5 5 0 0 1 4.5-5H11a4.5 4.5 0 0 1 9 .5A4 4 0 0 1 17 22H7a4 4 0 0 1-1-4"/><path d="M14 4V2M19.5 6.5l1-1M22 13h2"/></svg></div><div class="ph-title">飛行天氣</div><div class="ph-sub">輸入地址或定位查詢</div></div>
@@ -1058,8 +1064,8 @@ async function queryFlight(){
 // CONTACTS SEARCH
 // ══ 禁限航區地圖 ══
 let nfzMap = null;
-const nfzLayers = { airport:null, rcr:null, cred:null, county:null, park:null, port:null, kinmen:null, temp:null };
-const nfzFilters = { airport:true, rcr:true, cred:true, county:true, park:true, port:true, kinmen:true, temp:true };
+const nfzLayers = { airport: null, restrict: null, park: null };
+const nfzFilters = { airport: true, restrict: true, park: true };
 
 // 台灣主要機場座標與資訊
 const AIRPORTS_NFZ = [
@@ -1102,88 +1108,83 @@ const NATIONAL_PARKS = [
 function initNFZMap() {
   if (nfzMap) return;
   nfzMap = L.map('nfz-map', { zoomControl: true, attributionControl: false }).setView([23.9, 120.9], 8);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }).addTo(nfzMap);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 18, opacity: 0.9 }).addTo(nfzMap);
+
+  // 衛星底圖
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+  }).addTo(nfzMap);
+
+  // 街道標籤
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18, opacity: 0.9
+  }).addTo(nfzMap);
 
   Object.keys(nfzLayers).forEach(k => {
     nfzLayers[k] = L.layerGroup().addTo(nfzMap);
   });
 
-  const BASE = 'https://raw.githubusercontent.com/songmatin/kardo-tools/main/';
-
-  // nfz.geojson — 原本邏輯完全保留，只改 restrict 的 key 名稱為 rcr
-  fetch(BASE + 'nfz.geojson')
+  // 載入民航局 GeoJSON
+  fetch('https://raw.githubusercontent.com/songmatin/kardo-tools/main/nfz.geojson')
     .then(r => r.json())
     .then(data => {
       data.features.forEach(f => {
-        const p = f.properties || {};
+        const p = f.properties;
         const color = p.color || '#ff9f0a';
         const type = p.zone_type || 'restrict';
-        const key = type === 'no_fly' ? 'airport' : type === 'park' ? 'park' : 'rcr';
-        const label = key === 'airport' ? '🚫 機場禁飛區' : key === 'park' ? '🏞️ 國家公園' : '⛔ RCR限制區';
-        const useColor = key === 'airport' ? '#ff4f41' : key === 'park' ? '#888888' : '#8B0000';
+
         const layer = L.geoJSON(f, {
           style: {
-            color: useColor, fillColor: useColor,
-            fillOpacity: 0.2, weight: 1.5,
-            dashArray: key === 'airport' ? null : '5,4',
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.2,
+            weight: 1.5,
+            dashArray: type === 'no_fly' ? null : '5,4',
           }
         });
-        layer.bindPopup(
-          `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${p.name || label}</div>` +
-          `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:${useColor}30;color:${useColor};">${label}</div>`
-        );
-        nfzLayers[key].addLayer(layer);
-      });
-      console.log('nfz.geojson 載入完成:', data.features.length, '筆');
-    })
-    .catch(e => console.error('nfz.geojson 失敗:', e));
 
-  // county.geojson — 全部先歸黃區，之後確認欄位再分紅區
-  fetch(BASE + 'county.geojson')
-    .then(r => r.json())
-    .then(data => {
-      data.features.forEach(f => {
-        const p = f.properties || {};
-        const name = p.name || p.Name || p.NAME || p.CITY || '縣市管制區';
-        const layer = L.geoJSON(f, {
-          style: { color:'#FFD700', fillColor:'#FFD700', fillOpacity:0.15, weight:1.5, dashArray:'5,4' }
-        });
-        layer.bindPopup(
-          `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div>` +
-          `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:#FFD70030;color:#FFD700;">🟡 縣市黃區</div>`
-        );
-        nfzLayers['county'].addLayer(layer);
-      });
-      console.log('county.geojson 載入完成:', data.features.length, '筆');
-    })
-    .catch(e => console.error('county.geojson 失敗:', e));
+        layer.bindPopup(`
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${p.name}</div>
+          <div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:${color}30;color:${color};">
+            ${type === 'no_fly' ? '🚫 禁飛區' : type === 'park' ? '🏞️ 國家公園／商港' : '⚠️ 限制區'}
+          </div>
+        `);
 
-  // 其餘圖層
-  const SIMPLE = [
-    { key:'park',   file:'national_park.geojson',  color:'#228B22', fill:0.15, dash:'5,4', label:'🏞️ 國家公園' },
-    { key:'port',   file:'commercial_port.geojson', color:'#0066CC', fill:0.18, dash:'5,4', label:'⚓ 商港' },
-    { key:'kinmen', file:'kinmen_matsu.geojson',    color:'#FF6600', fill:0.18, dash:'5,4', label:'🏝️ 金馬地區' },
-    { key:'temp',   file:'temporary.geojson',       color:'#CC0000', fill:0.22, dash:null,  label:'🔴 臨時禁限航區' },
-  ];
-  SIMPLE.forEach(cfg => {
-    fetch(BASE + cfg.file)
-      .then(r => r.json())
-      .then(data => {
-        data.features.forEach(f => {
-          const p = f.properties || {};
-          const name = p.name || p.Name || p.NAME || p._label || cfg.label;
-          const layer = L.geoJSON(f, {
-            style: { color:cfg.color, fillColor:cfg.color, fillOpacity:cfg.fill, weight:1.5, dashArray:cfg.dash }
-          });
-          layer.bindPopup(
-            `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div>` +
-            `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:${cfg.color}30;color:${cfg.color};">${cfg.label}</div>`
-          );
-          nfzLayers[cfg.key].addLayer(layer);
-        });
-        console.log(cfg.file, '載入完成:', data.features.length, '筆');
-      })
-      .catch(e => console.error(cfg.file, '失敗:', e));
+        if (type === 'no_fly') nfzLayers.airport.addLayer(layer);
+        else if (type === 'park') nfzLayers.park.addLayer(layer);
+        else nfzLayers.restrict.addLayer(layer);
+      });
+      console.log('NFZ 載入完成:', data.features.length, '個區域');
+    })
+    .catch(e => console.error('NFZ 載入失敗:', e));
+}
+
+function toggleNFZ(k) {
+  nfzFilters[k] = !nfzFilters[k];
+  document.getElementById('nfz-' + k).classList.toggle('on', nfzFilters[k]);
+  if (nfzLayers[k]) {
+    if (nfzFilters[k]) nfzMap.addLayer(nfzLayers[k]);
+    else nfzMap.removeLayer(nfzLayers[k]);
+  }
+}
+
+function locateNFZ() {
+  if (!navigator.geolocation) { alert('不支援定位'); return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    const { latitude: lat, longitude: lng } = p.coords;
+    nfzMap.setView([lat, lng], 14);
+    L.circleMarker([lat, lng], {
+      radius: 10, color: '#50a0ff', fillColor: '#50a0ff', fillOpacity: 1, weight: 2
+    }).addTo(nfzMap).bindPopup('📍 您的位置').openPopup();
+  }, () => alert('無法取得位置'));
+}
+function filterContacts(){
+  const q=document.getElementById('contact-search').value.toLowerCase();
+  document.querySelectorAll('.contact-item').forEach(el=>{
+    el.style.display=el.querySelector('.contact-city').textContent.toLowerCase().includes(q)?'':'none';
   });
 }
+
+function fmtT(d){if(!d)return'—';return d.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false});}
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body></html>
