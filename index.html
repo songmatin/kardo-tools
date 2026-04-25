@@ -1303,6 +1303,25 @@ function parseCoords(input) {
   return null;
 }
 
+function isPlusCode(input) {
+  // 完整 Plus Code：5MW7+7MX 同榮里 臺中市北屯區 或 5MW7+7MX
+  return /^[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}/i.test(input.trim().split(' ')[0]);
+}
+
+async function decodePlusCode(code) {
+  // 取出 Plus Code 部分（空格前）
+  const plusCode = code.trim().split(' ')[0];
+  // 用 Google Geocoding API 解碼
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(plusCode)}&key=AIzaSyC6FIbAT7mT9sUY3W8H4VwMtQfGXURzu00`;
+  const r = await fetch(url);
+  const data = await r.json();
+  if (data.status === 'OK' && data.results.length) {
+    const loc = data.results[0].geometry.location;
+    return { lat: loc.lat, lng: loc.lng, name: data.results[0].formatted_address };
+  }
+  return null;
+}
+
 async function searchNFZ() {
   const q = document.getElementById('nfz-search').value.trim();
   if (!q) return;
@@ -1314,6 +1333,19 @@ async function searchNFZ() {
       radius: 10, color: 'var(--accent)', fillColor: 'var(--accent)', fillOpacity: 1, weight: 2
     }).addTo(nfzMap).bindPopup(`📍 ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`).openPopup();
     return;
+  }
+  // Plus Code 解碼
+  if (isPlusCode(q)) {
+    try {
+      const pc = await decodePlusCode(q);
+      if (pc) {
+        nfzMap.setView([pc.lat, pc.lng], 17);
+        L.circleMarker([pc.lat, pc.lng], {
+          radius: 10, color: 'var(--accent)', fillColor: 'var(--accent)', fillOpacity: 1, weight: 2
+        }).addTo(nfzMap).bindPopup(`📍 ${pc.name}`).openPopup();
+        return;
+      }
+    } catch(e) {}
   }
   // 用 Google Places API 搜尋
   try {
