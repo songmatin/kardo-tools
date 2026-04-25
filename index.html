@@ -278,18 +278,23 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
   </div>
   <!-- 圖層切換 -->
   <div class="filter-bar">
-    <div class="fb on" id="nfz-airport" onclick="toggleNFZ('airport')"><div class="fb-dot" style="background:#ff4f41;"></div>機場禁飛區</div>
-    <div class="fb on" id="nfz-restrict" onclick="toggleNFZ('restrict')"><div class="fb-dot" style="background:#ff9f0a;"></div>限制區</div>
+    <div class="fb on" id="nfz-airport" onclick="toggleNFZ('airport')"><div class="fb-dot" style="background:#e82127;"></div>機場禁飛</div>
+    <div class="fb on" id="nfz-county_red" onclick="toggleNFZ('county_red')"><div class="fb-dot" style="background:#ff4f41;"></div>縣市紅區</div>
+    <div class="fb on" id="nfz-county_yellow" onclick="toggleNFZ('county_yellow')"><div class="fb-dot" style="background:#ff9f0a;"></div>縣市黃區</div>
+    <div class="fb on" id="nfz-rcr" onclick="toggleNFZ('rcr')"><div class="fb-dot" style="background:#ff6d00;"></div>RCR限航</div>
     <div class="fb on" id="nfz-park" onclick="toggleNFZ('park')"><div class="fb-dot" style="background:#888;"></div>國家公園</div>
+    <div class="fb on" id="nfz-port" onclick="toggleNFZ('port')"><div class="fb-dot" style="background:#607d8b;"></div>商港</div>
   </div>
   <div id="nfz-map" style="height:60vh;margin:0 16px;border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border);"></div>
   <div style="margin:10px 16px 0;background:var(--card);backdrop-filter:blur(12px);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:10px;color:var(--w55);margin-bottom:8px;letter-spacing:0.06em;text-transform:uppercase;">圖例</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
-      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff4f41;flex-shrink:0;"></div>機場禁飛（5.6km）</div>
-      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff9f0a;flex-shrink:0;"></div>限制區</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#e82127;flex-shrink:0;"></div>機場禁飛區</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff4f41;flex-shrink:0;"></div>縣市紅區</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff9f0a;flex-shrink:0;"></div>縣市黃區</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#ff6d00;flex-shrink:0;"></div>RCR 限航區</div>
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#888;flex-shrink:0;"></div>國家公園</div>
-      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:2px;background:#50a0ff;flex-shrink:0;"></div>您的位置</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:9px;height:9px;border-radius:50%;background:#607d8b;flex-shrink:0;"></div>商港</div>
     </div>
   </div>
   <button class="q-btn" onclick="locateNFZ()" style="margin-top:10px;">
@@ -1066,8 +1071,8 @@ async function queryFlight(){
 // CONTACTS SEARCH
 // ══ 禁限航區地圖 ══
 let nfzMap = null;
-const nfzLayers = { airport: null, restrict: null, park: null };
-const nfzFilters = { airport: true, restrict: true, park: true };
+const nfzLayers = { airport: null, county_red: null, county_yellow: null, rcr: null, park: null, port: null };
+const nfzFilters = { airport: true, county_red: true, county_yellow: true, rcr: true, park: true, port: true };
 
 // 台灣主要機場座標與資訊
 const AIRPORTS_NFZ = [
@@ -1130,13 +1135,13 @@ function initNFZMap() {
   const LAYERS = [
     { file: 'nfz.geojson',             type: 'no_fly',   color: '#ff4f41', label: '🚫 禁飛區' },
     // county.geojson 是縣市行政邊界，不是個別禁飛點，移除
-    { file: 'national_park.geojson',   type: 'park',     color: '#888888', label: '🏞️ 國家公園' },
-    { file: 'commercial_port.geojson', type: 'park',     color: '#607d8b', label: '⚓ 商港' },
+    { file: 'national_park.geojson',   type: 'park',     color: '#888888', label: '🏞️ 國家公園', layer: 'park' },
+    { file: 'commercial_port.geojson', type: 'port',     color: '#607d8b', label: '⚓ 商港', layer: 'port' },
     { file: 'kinmen_matsu.geojson',    type: 'restrict', color: '#ff9f0a', label: '⚠️ 金馬限制區' },
     // temporary 單獨處理
   ];
 
-  LAYERS.forEach(({ file, type, color, label }) => {
+  LAYERS.forEach(({ file, type, color, label, layer: layerKey }) => {
     fetch(BASE + file)
       .then(r => r.json())
       .then(data => {
@@ -1156,9 +1161,8 @@ function initNFZMap() {
             <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${name}</div>
             <div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;background:${color}30;color:${color};">${label}</div>
           `);
-          if (type === 'no_fly') nfzLayers.airport.addLayer(layer);
-          else if (type === 'park') nfzLayers.park.addLayer(layer);
-          else nfzLayers.restrict.addLayer(layer);
+          const target = layerKey || 'airport';
+          if (nfzLayers[target]) nfzLayers[target].addLayer(layer);
         });
         console.log(`✅ ${file}: ${data.features.length} 個區域`);
       })
@@ -1189,8 +1193,8 @@ function initNFZMap() {
           `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:${desc?'6':'0'}px;background:${color}30;color:${color};">${label}</div>` +
           (desc ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>` : '')
         );
-        if (isRed) nfzLayers.airport.addLayer(layer);
-        else nfzLayers.restrict.addLayer(layer);
+        if (isRed) nfzLayers.county_red.addLayer(layer);
+        else nfzLayers.county_yellow.addLayer(layer);
       });
       console.log('✅ temporary.geojson:', data.features.length, '筆');
     })
@@ -1213,7 +1217,7 @@ function initNFZMap() {
           `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:${desc?'6':'0'}px;background:${color}30;color:${color};">🚫 縣市禁飛紅區</div>` +
           (desc ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>` : '')
         );
-        nfzLayers.airport.addLayer(layer);
+        nfzLayers.county_red.addLayer(layer);
       });
       console.log('✅ uav_red.geojson:', data.features.length, '筆');
     })
@@ -1236,7 +1240,7 @@ function initNFZMap() {
           `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:${desc?'6':'0'}px;background:${color}30;color:${color};">⚠️ 縣市限制黃區</div>` +
           (desc ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>` : '')
         );
-        nfzLayers.restrict.addLayer(layer);
+        nfzLayers.county_yellow.addLayer(layer);
       });
       console.log('✅ uav_yellow.geojson:', data.features.length, '筆');
     })
@@ -1266,8 +1270,8 @@ function initNFZMap() {
           `<div style="font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:${desc?'6':'0'}px;background:${color}30;color:${color};">${label}</div>` +
           (desc ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>` : '')
         );
-        if (isRed) nfzLayers.airport.addLayer(layer);
-        else nfzLayers.restrict.addLayer(layer);
+        if (isRed) nfzLayers.county_red.addLayer(layer);
+        else nfzLayers.county_yellow.addLayer(layer);
       });
       console.log('✅ uav_ry.geojson:', data.features.length, '筆');
     })
@@ -1276,7 +1280,8 @@ function initNFZMap() {
 
 function toggleNFZ(k) {
   nfzFilters[k] = !nfzFilters[k];
-  document.getElementById('nfz-' + k).classList.toggle('on', nfzFilters[k]);
+  const el = document.getElementById('nfz-' + k);
+  if (el) el.classList.toggle('on', nfzFilters[k]);
   if (nfzLayers[k]) {
     if (nfzFilters[k]) nfzMap.addLayer(nfzLayers[k]);
     else nfzMap.removeLayer(nfzLayers[k]);
