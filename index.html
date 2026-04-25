@@ -1315,18 +1315,37 @@ async function searchNFZ() {
     }).addTo(nfzMap).bindPopup(`📍 ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`).openPopup();
     return;
   }
-  // 用 Nominatim 搜尋地址/地名
+  // 用 Google Places API 搜尋
   try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&countrycodes=tw&limit=1&format=json`, {
-      headers: { 'Accept-Language': 'zh-TW,zh', 'User-Agent': 'KardoAerialTools/1.0' }
+    const url = `https://places.googleapis.com/v1/places:searchText`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': 'AIzaSyC6FIbAT7mT9sUY3W8H4VwMtQfGXURzu00',
+        'X-Goog-FieldMask': 'places.displayName,places.location,places.formattedAddress'
+      },
+      body: JSON.stringify({
+        textQuery: q,
+        languageCode: 'zh-TW',
+        locationBias: {
+          circle: {
+            center: { latitude: 23.9, longitude: 120.9 },
+            radius: 500000
+          }
+        }
+      })
     });
     const data = await r.json();
-    if (!data.length) { alert('找不到此地點'); return; }
-    const { lat, lon, display_name } = data[0];
-    nfzMap.setView([parseFloat(lat), parseFloat(lon)], 16);
-    L.circleMarker([parseFloat(lat), parseFloat(lon)], {
+    if (!data.places || !data.places.length) { alert('找不到此地點'); return; }
+    const place = data.places[0];
+    const lat = place.location.latitude;
+    const lng = place.location.longitude;
+    const name = place.displayName?.text || place.formattedAddress || q;
+    nfzMap.setView([lat, lng], 16);
+    L.circleMarker([lat, lng], {
       radius: 10, color: 'var(--accent)', fillColor: 'var(--accent)', fillOpacity: 1, weight: 2
-    }).addTo(nfzMap).bindPopup(`📍 ${display_name}`).openPopup();
+    }).addTo(nfzMap).bindPopup(`📍 ${name}<br><span style="font-size:11px;color:rgba(255,255,255,0.6)">${place.formattedAddress||''}</span>`).openPopup();
   } catch(e) { alert('搜尋失敗，請稍後再試'); }
 }
 
