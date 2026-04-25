@@ -897,22 +897,58 @@ async function fetchWeather(lat,lng,label){
     hh+='</div>';
     const alts=[{l:'10m',f:1},{l:'80m',f:1.15},{l:'120m',f:1.22},{l:'180m',f:1.3},{l:'300m',f:1.4},{l:'500m',f:1.5}];
     let wh='';
-    alts.forEach(a=>{const v=(ws*a.f).toFixed(1),p=Math.min(parseFloat(v)/15*100,100),c=parseFloat(v)<5?'var(--green)':parseFloat(v)<10?'var(--orange)':'var(--red)';const mavicPct=(12/15*100).toFixed(1);
+    alts.forEach(a=>{const v=(ws*a.f).toFixed(1),p=Math.min(parseFloat(v)/15*100,100),c=parseFloat(v)<5?'var(--green)':parseFloat(v)<10?'var(--orange)':'var(--red)';const inspirePct=(14/15*100).toFixed(1);
+      const mavicPct=(12/15*100).toFixed(1);
       const avataPct=(10.7/15*100).toFixed(1);
       wh+='<div class="wind-row">'+
         '<div class="wind-alt">'+a.l+'</div>'+
         '<div class="wind-bg" style="position:relative;overflow:visible;">'+
           '<div class="wind-fill" style="width:'+p+'%;background:'+c+';"></div>'+
-          // Avata 360 極限線
-          '<div style="position:absolute;top:-8px;left:'+avataPct+'%;transform:translateX(-50%);font-size:8px;color:rgba(255,255,255,0.4);line-height:1;">A</div>'+
-          '<div style="position:absolute;top:0;left:'+avataPct+'%;width:1px;height:100%;background:rgba(255,255,255,0.3);"></div>'+
-          // Mavic 4 Pro 極限線
-          '<div style="position:absolute;top:-8px;left:'+mavicPct+'%;transform:translateX(-50%);font-size:8px;color:rgba(255,255,255,0.4);line-height:1;">M</div>'+
-          '<div style="position:absolute;top:0;left:'+mavicPct+'%;width:1px;height:100%;background:rgba(255,255,255,0.3);"></div>'+
+          '<div style="position:absolute;top:-8px;left:'+avataPct+'%;transform:translateX(-50%);font-size:8px;color:rgba(255,255,255,0.35);line-height:1;">A</div>'+
+          '<div style="position:absolute;top:0;left:'+avataPct+'%;width:1px;height:100%;background:rgba(255,255,255,0.25);"></div>'+
+          '<div style="position:absolute;top:-8px;left:'+mavicPct+'%;transform:translateX(-50%);font-size:8px;color:rgba(255,255,255,0.35);line-height:1;">M</div>'+
+          '<div style="position:absolute;top:0;left:'+mavicPct+'%;width:1px;height:100%;background:rgba(255,255,255,0.25);"></div>'+
+          '<div style="position:absolute;top:-8px;left:'+inspirePct+'%;transform:translateX(-50%);font-size:8px;color:rgba(255,255,255,0.35);line-height:1;">I</div>'+
+          '<div style="position:absolute;top:0;left:'+inspirePct+'%;width:1px;height:100%;background:rgba(255,255,255,0.25);"></div>'+
         '</div>'+
         '<div class="wind-v" style="color:'+c+';">'+v+'m/s</div>'+
       '</div>';});
 
+    // 機體抗風參考表
+    const droneRef=[
+      {cat:'專業影視', name:'Inspire 3',    limit:14, bf:7,  note:'動力冗餘最高，高空穩定性極強'},
+      {cat:'旗艦航拍', name:'Mavic 4 Pro',  limit:12, bf:6,  note:'消費級天花板，風中姿態修正速度快'},
+      {cat:'進階航拍', name:'Air 3S',       limit:12, bf:6,  note:'重量較 Mavic 輕，但動力調教相同'},
+      {cat:'全景 FPV', name:'Avata 360',    limit:10.7,bf:5, note:'機身較寬，側風對拼接畫面影響顯著'},
+      {cat:'迷你旗艦', name:'Mini 4 Pro',   limit:10.7,bf:5, note:'受限於 249g 物理質量，高空易飄移'},
+      {cat:'掌上 VLOG',name:'Neo 2',        limit:10.7,bf:5, note:''},
+    ];
+    let dt='<div style="margin:10px 16px 0;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">';
+    dt+='<div style="font-size:10px;color:var(--w55);margin-bottom:10px;letter-spacing:0.06em;text-transform:uppercase;">機體抗風極限參考</div>';
+    dt+='<div style="display:grid;grid-template-columns:1fr auto auto;gap:0;">';
+    dt+='<div style="font-size:10px;color:var(--w35);padding-bottom:6px;border-bottom:0.5px solid var(--border);">機體</div>';
+    dt+='<div style="font-size:10px;color:var(--w35);padding-bottom:6px;border-bottom:0.5px solid var(--border);text-align:center;padding-left:12px;">抗風</div>';
+    dt+='<div style="font-size:10px;color:var(--w35);padding-bottom:6px;border-bottom:0.5px solid var(--border);text-align:center;padding-left:12px;">風級</div>';
+    droneRef.forEach(d=>{
+      const over=maxWs>d.limit;
+      const warn=!over&&maxWs>d.limit*0.8;
+      const bc=over?'var(--red)':warn?'var(--orange)':'var(--w70)';
+      const ic=over?'🚫':warn?'⚠️':'';
+      dt+='<div style="padding:7px 0;border-bottom:0.5px solid rgba(255,255,255,0.04);">';
+      dt+='<div style="font-size:12px;font-weight:600;color:'+bc+';">'+ic+' '+d.name+'</div>';
+      dt+='<div style="font-size:10px;color:var(--w35);margin-top:1px;">'+d.cat+(d.note?(' · '+d.note):'')+'</div>';
+      dt+='</div>';
+      dt+='<div style="padding:7px 0 7px 12px;border-bottom:0.5px solid rgba(255,255,255,0.04);text-align:center;vertical-align:middle;">';
+      dt+='<div style="font-size:13px;font-weight:700;color:'+bc+';">'+d.limit+'</div>';
+      dt+='<div style="font-size:9px;color:var(--w35);">m/s</div>';
+      dt+='</div>';
+      dt+='<div style="padding:7px 0 7px 12px;border-bottom:0.5px solid rgba(255,255,255,0.04);text-align:center;">';
+      dt+='<div style="font-size:13px;font-weight:700;color:'+bc+';">'+d.bf+'</div>';
+      dt+='<div style="font-size:9px;color:var(--w35);">級</div>';
+      dt+='</div>';
+    });
+    dt+='</div></div>';
+    wh+=dt;
     const gm=new Date(sr.getTime()-30*60000),gme=new Date(sr.getTime()+30*60000),bm=new Date(sr.getTime()-45*60000);
     const ge=new Date(ss.getTime()-30*60000),gee=new Date(ss.getTime()+10*60000),be=new Date(ss.getTime()+20*60000),bee=new Date(ss.getTime()+40*60000);
     document.getElementById('w-result').innerHTML=
