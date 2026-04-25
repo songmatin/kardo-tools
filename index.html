@@ -932,7 +932,7 @@ async function fetchWeather(lat,lng,label){
     let hh='<div class="hour-scroll">';
     hrs.forEach(h=>{const t=new Date(h.dt*1000),isNow=Math.abs(t-new Date())<7200000;hh+='<div class="hour-cell '+(isNow?'now':'')+'"><div class="hour-t">'+t.getHours()+'時</div><div class="hour-temp">'+Math.round(h.main.temp)+'°</div><div class="hour-rain">'+Math.round((h.pop||0)*100)+'%</div></div>';});
     hh+='</div>';
-    const alts=[{l:'10m',f:1},{l:'80m',f:1.15},{l:'120m',f:1.22},{l:'180m',f:1.3},{l:'300m',f:1.4},{l:'500m',f:1.5}];
+    const alts=[{l:'10m',f:1},{l:'80m',f:1.15},{l:'120m',f:1.22},{l:'180m',f:1.3},{l:'300m',f:1.4},{l:'500m',f:1.5},{l:'600m',f:1.57},{l:'700m',f:1.63},{l:'800m',f:1.68},{l:'900m',f:1.73}];
     let wh='';
     alts.forEach(a=>{const v=(ws*a.f).toFixed(1),p=Math.min(parseFloat(v)/15*100,100),c=parseFloat(v)<5?'var(--green)':parseFloat(v)<10?'var(--orange)':'var(--red)';const inspirePct=(14/15*100).toFixed(1);
       const mavicPct=(12/15*100).toFixed(1);
