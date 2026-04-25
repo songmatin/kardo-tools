@@ -1328,10 +1328,10 @@ async function searchNFZ() {
       body: JSON.stringify({
         textQuery: q,
         languageCode: 'zh-TW',
-        locationBias: {
-          circle: {
-            center: { latitude: 23.9, longitude: 120.9 },
-            radius: 500000
+        locationRestriction: {
+          rectangle: {
+            low: { latitude: 21.8, longitude: 119.0 },
+            high: { latitude: 26.5, longitude: 122.5 }
           }
         }
       })
