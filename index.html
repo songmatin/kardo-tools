@@ -920,12 +920,12 @@ async function fetchWeather(lat,lng,label){
     // 機體抗風參考表
     const maxWs=parseFloat((ws*1.5).toFixed(1));
     const droneRef=[
-      {cat:'專業影視', name:'Inspire 3',    limit:14, bf:7,  note:'動力冗餘最高，高空穩定性極強'},
-      {cat:'旗艦航拍', name:'Mavic 4 Pro',  limit:12, bf:6,  note:'消費級天花板，風中姿態修正速度快'},
-      {cat:'進階航拍', name:'Air 3S',       limit:12, bf:6,  note:'重量較 Mavic 輕，但動力調教相同'},
-      {cat:'全景 FPV', name:'Avata 360',    limit:10.7,bf:5, note:'機身較寬，側風對拼接畫面影響顯著'},
-      {cat:'迷你旗艦', name:'Mini 4 Pro',   limit:10.7,bf:5, note:'受限於 249g 物理質量，高空易飄移'},
-      {cat:'掌上 VLOG',name:'Neo 2',        limit:10.7,bf:5, note:''},
+      {cat:'專業影視', name:'Inspire 3'},
+      {cat:'旗艦航拍', name:'Mavic 4 Pro'},
+      {cat:'進階航拍', name:'Air 3S'},
+      {cat:'全景 FPV', name:'Avata 360'},
+      {cat:'迷你旗艦', name:'Mini 4 Pro'},
+      {cat:'掌上 VLOG',name:'Neo 2'},
     ];
     let dt='<div style="margin:10px 16px 0;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">';
     dt+='<div style="font-size:10px;color:var(--w55);margin-bottom:10px;letter-spacing:0.06em;text-transform:uppercase;">機體抗風極限參考</div>';
