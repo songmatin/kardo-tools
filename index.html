@@ -3,12 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="空拍工具箱">
-<meta name="theme-color" content="#0a0a0a">
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icon-192.png">
 <title>空拍工具箱 — Kardo Aerial</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -98,7 +92,7 @@ body{font-family:var(--sans);color:#fff;-webkit-font-smoothing:antialiased;}
 .w-sub{font-size:12px;color:var(--w55);margin-top:4px;}
 .wind-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
 .wind-alt{font-size:11px;color:var(--w55);width:46px;flex-shrink:0;}
-.wind-bg{flex:1;height:5px;border-radius:3px;background:var(--w06);overflow:visible;position:relative;}
+.wind-bg{flex:1;height:5px;border-radius:3px;background:var(--w06);overflow:hidden;}
 .wind-fill{height:100%;border-radius:3px;transition:width 0.6s;}
 .wind-v{font-size:11px;width:38px;text-align:right;flex-shrink:0;}
 .hour-scroll{display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none;}
@@ -1492,11 +1486,5 @@ function filterContacts(){
 
 function fmtT(d){if(!d)return'—';return d.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false});}
 function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-</script><script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/sw.js').catch(()=>{});
-  });
-}
 </script>
 </body></html>
