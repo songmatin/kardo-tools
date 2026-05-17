@@ -1136,7 +1136,7 @@ async function queryFlight(){
       .filter(f=>f.t)
       .sort((a,b)=>a.t-b.t);
     let bestGap=0,bestIdx=-1;
-    const upcoming=parsed.filter(f=>f.t>now);
+    const upcoming=parsed.filter(f=>f.t>now&&f.t<new Date(now.getTime()+24*3600000));
     for(let i=0;i<upcoming.length-1;i++){const gap=(upcoming[i+1].t-upcoming[i].t)/60000;if(gap>bestGap&&gap<180){bestGap=gap;bestIdx=i;}}
     let h='';
     if(bestIdx>=0){
@@ -1155,7 +1155,9 @@ async function queryFlight(){
     h+='</div>';
     res.innerHTML=h;
   }catch(e){res.innerHTML='<div class="state-box"><div class="state-emoji">⚠️</div><div class="state-title">查詢失敗</div><div class="state-sub">請稍後再試</div></div>';}
-  btn.disabled=false;
+  btn.disabled=false;// 每5分鐘自動刷新
+if(window._flightTimer) clearInterval(window._flightTimer);
+window._flightTimer = setInterval(()=>queryFlight(), 5*60*1000);
 }
 
 // CONTACTS SEARCH
