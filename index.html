@@ -1145,7 +1145,7 @@ async function queryFlight(){
       h+='<div class="gap-card"><div class="gap-lbl">⬇ 下一個最大空檔</div><div class="gap-min" style="color:'+gc+';">'+Math.round(bestGap)+' <span style="font-size:20px;font-weight:400;">分鐘</span></div><div class="gap-sub">'+selFName+'</div><div class="gap-between"><div class="gap-flt"><div class="gap-fno">'+(a.flight_iata||a.flight_icao||'—')+'</div><div class="gap-ftime">'+fmtT(a.t)+'</div><div class="gap-ftype">'+(a.dir==='arr'?'↓ 降落':'↑ 起飛')+'</div></div><div class="gap-div">⟷</div><div class="gap-flt"><div class="gap-fno">'+(b.flight_iata||b.flight_icao||'—')+'</div><div class="gap-ftime">'+fmtT(b.t)+'</div><div class="gap-ftype">'+(b.dir==='arr'?'↓ 降落':'↑ 起飛')+'</div></div></div></div>';
     }
     h+='<div class="fl-wrap"><div class="fl-header"><div class="fl-header-title">航班時刻表</div><div class="fl-header-time">更新：'+fmtT(now)+'</div></div>';
-    parsed.slice(0,25).forEach((f,i,arr)=>{
+    upcoming.slice(0,25).forEach((f,i,arr)=>{
       const past=f.t<now;
       const dirSvg=f.dir==='arr'?'<svg viewBox="0 0 18 18" fill="none" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round"><path d="M9 3v9M5 8l4 4 4-4"/></svg>':'<svg viewBox="0 0 18 18" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><path d="M9 15V6M5 10l4-4 4 4"/></svg>';
       const route=f.dir==='arr'?(f.dep_iata||'—')+'→':(f.arr_iata||'—');
@@ -1155,9 +1155,9 @@ async function queryFlight(){
     h+='</div>';
     res.innerHTML=h;
   }catch(e){res.innerHTML='<div class="state-box"><div class="state-emoji">⚠️</div><div class="state-title">查詢失敗</div><div class="state-sub">請稍後再試</div></div>';}
-  btn.disabled=false;// 每5分鐘自動刷新
-if(window._flightTimer) clearInterval(window._flightTimer);
-window._flightTimer = setInterval(()=>queryFlight(), 5*60*1000);
+btn.disabled=false;
+  if(window._flightTimer) clearInterval(window._flightTimer);
+  window._flightTimer = setInterval(()=>queryFlight(), 5*60*1000);
 }
 
 // CONTACTS SEARCH
