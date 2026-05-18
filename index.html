@@ -1154,8 +1154,8 @@ async function queryFlight(){
     });
     h+='</div>';
     res.innerHTML=h;
-  }catch(e){res.innerHTML='<div class="state-box"><div class="state-emoji">⚠️</div><div class="state-title">查詢失敗</div><div class="state-sub">請稍後再試</div></div>';}
-btn.disabled=false;
+}catch(e){res.innerHTML='<div class="state-box"><div class="state-emoji">⚠️</div><div class="state-title">查詢失敗</div><div class="state-sub">請稍後再試</div></div>';}
+  btn.disabled=false;
   if(window._flightTimer) clearInterval(window._flightTimer);
   window._flightTimer = setInterval(()=>queryFlight(), 5*60*1000);
 }
