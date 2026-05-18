@@ -1121,7 +1121,7 @@ async function queryFlight(){
     const all=[...(arr.response||[]).map(f=>({...f,dir:'arr'})),...(dep.response||[]).map(f=>({...f,dir:'dep'}))];
     if(!all.length){res.innerHTML='<div class="state-box"><div class="state-emoji">✈️</div><div class="state-title">目前無航班資料</div></div>';btn.disabled=false;return;}
     const now=new Date();
-   function parseT(f){
+    function parseT(f){
       const timeStr=f.dir==='arr'
         ?(f.arr_estimated||f.arr_actual||f.arr_time)
         :(f.dep_estimated||f.dep_actual||f.dep_time);
@@ -1130,31 +1130,53 @@ async function queryFlight(){
       const d=new Date(s);
       return isNaN(d)?null:d;
     }
-   const parsed=all
+    const parsed=all
       .filter(f=>f.status!=='landed'&&f.status!=='cancelled')
       .map(f=>({...f,t:parseT(f)}))
       .filter(f=>f.t)
       .sort((a,b)=>a.t-b.t);
+    // 去除 codeshare 重複班次，同一分鐘只留一班
+    const deduped=[];
+    let lastT=null;
+    parsed.forEach(f=>{
+      const tKey=Math.round(f.t/60000);
+      if(tKey!==lastT){deduped.push(f);lastT=tKey;}
+    });
+    // 只取未來24小時
+    const upcoming=deduped.filter(f=>f.t>now&&f.t<new Date(now.getTime()+24*3600000));
+    // 找最大空檔（10分鐘以上）
     let bestGap=0,bestIdx=-1;
-    const upcoming=parsed.filter(f=>f.t>now&&f.t<new Date(now.getTime()+24*3600000));
-    for(let i=0;i<upcoming.length-1;i++){const gap=(upcoming[i+1].t-upcoming[i].t)/60000;if(gap>bestGap&&gap<180){bestGap=gap;bestIdx=i;}}
+    for(let i=0;i<upcoming.length-1;i++){
+      const gap=(upcoming[i+1].t-upcoming[i].t)/60000;
+      if(gap>=10&&gap>bestGap&&gap<180){bestGap=gap;bestIdx=i;}
+    }
     let h='';
     if(bestIdx>=0){
       const a=upcoming[bestIdx],b=upcoming[bestIdx+1];
       const gc=bestGap>=20?'var(--green)':bestGap>=10?'var(--orange)':'var(--red)';
       h+='<div class="gap-card"><div class="gap-lbl">⬇ 下一個最大空檔</div><div class="gap-min" style="color:'+gc+';">'+Math.round(bestGap)+' <span style="font-size:20px;font-weight:400;">分鐘</span></div><div class="gap-sub">'+selFName+'</div><div class="gap-between"><div class="gap-flt"><div class="gap-fno">'+(a.flight_iata||a.flight_icao||'—')+'</div><div class="gap-ftime">'+fmtT(a.t)+'</div><div class="gap-ftype">'+(a.dir==='arr'?'↓ 降落':'↑ 起飛')+'</div></div><div class="gap-div">⟷</div><div class="gap-flt"><div class="gap-fno">'+(b.flight_iata||b.flight_icao||'—')+'</div><div class="gap-ftime">'+fmtT(b.t)+'</div><div class="gap-ftype">'+(b.dir==='arr'?'↓ 降落':'↑ 起飛')+'</div></div></div></div>';
+    }else{
+      h+='<div class="gap-card"><div class="gap-lbl">空檔狀況</div><div style="font-size:16px;color:var(--green);font-weight:600;padding:8px 0;">✅ 目前無密集航班</div><div class="gap-sub">'+selFName+'</div></div>';
     }
     h+='<div class="fl-wrap"><div class="fl-header"><div class="fl-header-title">航班時刻表</div><div class="fl-header-time">更新：'+fmtT(now)+'</div></div>';
-    upcoming.slice(0,25).forEach((f,i,arr)=>{
-      const past=f.t<now;
+    upcoming.slice(0,30).forEach((f,i,farr)=>{
       const dirSvg=f.dir==='arr'?'<svg viewBox="0 0 18 18" fill="none" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round"><path d="M9 3v9M5 8l4 4 4-4"/></svg>':'<svg viewBox="0 0 18 18" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><path d="M9 15V6M5 10l4-4 4 4"/></svg>';
       const route=f.dir==='arr'?(f.dep_iata||'—')+'→':(f.arr_iata||'—');
-      h+='<div class="fl-item" style="opacity:'+(past?0.35:1)+';"><div class="fl-row"><div class="fl-dir">'+dirSvg+'</div><div class="fl-info"><div class="fl-no">'+(f.flight_iata||f.flight_icao||'—')+'</div><div class="fl-route">'+route+'</div></div><div class="fl-right"><div class="fl-time" style="color:'+(f.dir==='arr'?'var(--blue)':'var(--accent)')+';">'+fmtT(f.t)+'</div><div class="fl-status">'+(f.dir==='arr'?'降落':'起飛')+'</div></div></div></div>';
-      if(i<arr.length-1&&arr[i+1]){const gap=(arr[i+1].t-f.t)/60000;if(gap>0&&gap<180){const cls=gap>=20?'good':gap>=10?'warn':'bad';h+='<div class="fl-gap-bar '+cls+'">'+(gap>=20?'✅':gap>=10?'⚠️':'🚫')+' 空檔 '+Math.round(gap)+' 分鐘</div>';}}
+      h+='<div class="fl-item"><div class="fl-row"><div class="fl-dir">'+dirSvg+'</div><div class="fl-info"><div class="fl-no">'+(f.flight_iata||f.flight_icao||'—')+'</div><div class="fl-route">'+route+'</div></div><div class="fl-right"><div class="fl-time" style="color:'+(f.dir==='arr'?'var(--blue)':'var(--accent)')+';">'+fmtT(f.t)+'</div><div class="fl-status">'+(f.dir==='arr'?'降落':'起飛')+'</div></div></div></div>';
+      if(i<farr.length-1&&farr[i+1]){
+        const gap=(farr[i+1].t-f.t)/60000;
+        if(gap>=10&&gap<180){
+          const cls=gap>=20?'good':'warn';
+          h+='<div class="fl-gap-bar '+cls+'">'+(gap>=20?'✅':'⚠️')+' 空檔 '+Math.round(gap)+' 分鐘</div>';
+        }
+      }
     });
     h+='</div>';
     res.innerHTML=h;
-  }catch(e){res.innerHTML='<div class="state-box"><div class="state-emoji">⚠️</div><div class="state-title">查詢失敗</div><div class="state-sub">請稍後再試</div></div>';}
+  }catch(e){
+    console.error(e);
+    res.innerHTML='<div class="state-box"><div class="state-emoji">⚠️</div><div class="state-title">查詢失敗</div><div class="state-sub">請稍後再試</div></div>';
+  }
   btn.disabled=false;
   if(window._flightTimer) clearInterval(window._flightTimer);
   window._flightTimer = setInterval(()=>queryFlight(), 5*60*1000);
