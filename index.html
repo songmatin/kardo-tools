@@ -1121,16 +1121,16 @@ async function queryFlight(){
     const all=[...(arr.response||[]).map(f=>({...f,dir:'arr'})),...(dep.response||[]).map(f=>({...f,dir:'dep'}))];
     if(!all.length){res.innerHTML='<div class="state-box"><div class="state-emoji">✈️</div><div class="state-title">目前無航班資料</div></div>';btn.disabled=false;return;}
     const now=new Date();
-    function parseT(f){
+   function parseT(f){
       const timeStr=f.dir==='arr'
         ?(f.arr_estimated||f.arr_actual||f.arr_time)
         :(f.dep_estimated||f.dep_actual||f.dep_time);
       if(!timeStr)return null;
-      const s=timeStr.includes('T')?timeStr:timeStr.replace(' ','T');
+      const s=(timeStr.includes('T')?timeStr:timeStr.replace(' ','T'))+'+08:00';
       const d=new Date(s);
       return isNaN(d)?null:d;
     }
-    const parsed=all
+   const parsed=all
       .filter(f=>f.status!=='landed'&&f.status!=='cancelled')
       .map(f=>({...f,t:parseT(f)}))
       .filter(f=>f.t)
@@ -1154,7 +1154,7 @@ async function queryFlight(){
     });
     h+='</div>';
     res.innerHTML=h;
-}catch(e){res.innerHTML='<div class="state-box"><div class="state-emoji">⚠️</div><div class="state-title">查詢失敗</div><div class="state-sub">請稍後再試</div></div>';}
+  }catch(e){res.innerHTML='<div class="state-box"><div class="state-emoji">⚠️</div><div class="state-title">查詢失敗</div><div class="state-sub">請稍後再試</div></div>';}
   btn.disabled=false;
   if(window._flightTimer) clearInterval(window._flightTimer);
   window._flightTimer = setInterval(()=>queryFlight(), 5*60*1000);
