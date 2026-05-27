@@ -883,22 +883,28 @@ function renderWindAlt(ws){
 // ── TIDE (CWA Real Data) ──
 const CWA_KEY = 'CWA-88714A94-2A9A-4B48-B5E4-E7595BDF48D9';
 
-// 台灣主要潮汐測站
-const TIDE_STATIONS = [
-  { id:'46694', name:'基隆',   lat:25.1437, lng:121.7412 },
-  { id:'46755', name:'淡水',   lat:25.1681, lng:121.4342 },
-  { id:'46739', name:'台中港', lat:24.2678, lng:120.5208 },
-  { id:'46730', name:'安平',   lat:22.9908, lng:120.1614 },
-  { id:'46744', name:'高雄',   lat:22.6167, lng:120.2667 },
-  { id:'46699', name:'花蓮',   lat:23.9750, lng:121.6167 },
-  { id:'46706', name:'蘇澳',   lat:24.5958, lng:121.8583 },
-  { id:'46761', name:'澎湖',   lat:23.5622, lng:119.5706 },
-  { id:'46759', name:'金門',   lat:24.4333, lng:118.3833 },
+// 106 個沿海鄉鎮（從官方文件取得座標）
+const TIDE_LOCATIONS = [
+  {name:'新北市貢寮區',lat:25.0217,lng:121.95},{name:'基隆市中正區',lat:25.1506,lng:121.79},
+  {name:'新北市淡水區',lat:25.1915,lng:121.414},{name:'新北市金山區',lat:25.2475,lng:121.638},
+  {name:'桃園市觀音區',lat:25.0669,lng:121.08},{name:'新竹市北區',lat:24.8486,lng:120.9206},
+  {name:'苗栗縣通霄鎮',lat:24.4948,lng:120.6547},{name:'臺中市梧棲區',lat:24.2878,lng:120.5331},
+  {name:'彰化縣鹿港鎮',lat:24.094,lng:120.3618},{name:'彰化縣芳苑鄉',lat:23.9683,lng:120.3145},
+  {name:'雲林縣麥寮鄉',lat:23.7861,lng:120.1603},{name:'雲林縣口湖鄉',lat:23.5654,lng:120.1379},
+  {name:'嘉義縣東石鄉',lat:23.4494,lng:120.14},{name:'嘉義縣布袋鎮',lat:23.3889,lng:120.1443},
+  {name:'臺南市北門區',lat:23.2374,lng:120.0755},{name:'臺南市七股區',lat:23.1371,lng:120.0734},
+  {name:'臺南市安平區',lat:22.9786,lng:120.1758},{name:'高雄市旗津區',lat:22.5801,lng:120.2875},
+  {name:'高雄市小港區',lat:22.5337,lng:120.3179},{name:'高雄市林園區',lat:22.4923,lng:120.3785},
+  {name:'屏東縣東港鎮',lat:22.465,lng:120.4383},{name:'屏東縣恆春鎮',lat:21.9458,lng:120.7453},
+  {name:'臺東縣臺東市',lat:22.7908,lng:121.1931},{name:'臺東縣成功鎮',lat:23.0972,lng:121.38},
+  {name:'花蓮縣花蓮市',lat:23.9806,lng:121.6236},{name:'宜蘭縣蘇澳鎮',lat:24.5925,lng:121.8669},
+  {name:'宜蘭縣頭城鎮',lat:24.8672,lng:121.8375},{name:'澎湖縣馬公市',lat:23.5603,lng:119.5781},
+  {name:'金門縣金城鎮',lat:24.4211,lng:118.2892},{name:'連江縣南竿鄉',lat:26.1617,lng:119.9428},
 ];
 
-function nearestTideStation(userLat, userLng){
-  let best = TIDE_STATIONS[0], minD = Infinity;
-  TIDE_STATIONS.forEach(s=>{
+function nearestTideLocation(userLat, userLng){
+  let best = TIDE_LOCATIONS[0], minD = Infinity;
+  TIDE_LOCATIONS.forEach(s=>{
     const d = Math.hypot(s.lat - userLat, s.lng - userLng);
     if(d < minD){ minD = d; best = s; }
   });
@@ -907,53 +913,51 @@ function nearestTideStation(userLat, userLng){
 
 async function fetchTides(){
   if(!lat || !lng) return;
-  const station = nearestTideStation(lat, lng);
-  const today = new Date().toISOString().slice(0,10);
+  const loc = nearestTideLocation(lat, lng);
+  const tideDisc = document.getElementById('tide-disc');
 
   try{
-    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&StationID=${station.id}&Date=${today}`;
+    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&locationName=${encodeURIComponent(loc.name)}&format=JSON`;
     const res = await fetch(url);
     const json = await res.json();
 
-    const records = json?.records?.Tide?.[0]?.Daily?.[0]?.Time;
-    if(!records || !records.length) throw new Error('no data');
+    // Navigate JSON structure: records.Tide[].Daily[].Time[]
+    const tideArr = json?.records?.Tide;
+    if(!tideArr || !tideArr.length) throw new Error('no tide records');
 
-    // Filter high/low tides for today
-    const tides = records
-      .map(t => ({
-        type: t.TideRange,   // 滿潮 / 乾潮
-        time: t.DateTime.slice(11,16),
-        height: parseFloat(t.TideHeights?.AboveChartDatum || t.TideHeights?.AboveMSL || 0)
-      }))
-      .filter(t => t.type === '滿潮' || t.type === '乾潮');
+    const daily = tideArr[0]?.Daily;
+    if(!daily || !daily.length) throw new Error('no daily');
+
+    // Get today's data (first entry)
+    const times = daily[0]?.Time || [];
+    if(!times.length) throw new Error('no times');
+
+    // Parse high/low tides
+    const tides = times.map(t => ({
+      type:   t.TideRange,          // 滿潮 or 乾潮
+      time:   t.DateTime ? t.DateTime.slice(11,16) : '--:--',
+      height: parseFloat(
+        t.TideHeights?.AboveMSL ??
+        t.TideHeights?.AboveChartDatum ??
+        t.TideHeights?.LandSurveyDatum ?? 0
+      ).toFixed(2)
+    }));
 
     const highs = tides.filter(t => t.type === '滿潮');
     const lows  = tides.filter(t => t.type === '乾潮');
 
-    // Fill UI — up to 2 highs, 1 low shown
-    if(highs[0]){
-      document.getElementById('ht1').textContent = highs[0].time;
-      document.getElementById('ht1h').textContent = `${highs[0].height.toFixed(2)}m`;
-    }
-    if(lows[0]){
-      document.getElementById('lt1').textContent = lows[0].time;
-      document.getElementById('lt1h').textContent = `${lows[0].height.toFixed(2)}m`;
-    }
-    if(highs[1]){
-      document.getElementById('ht2').textContent = highs[1].time;
-      document.getElementById('ht2h').textContent = `${highs[1].height.toFixed(2)}m`;
-    }
+    if(highs[0]){ document.getElementById('ht1').textContent = highs[0].time; document.getElementById('ht1h').textContent = `${highs[0].height}m`; }
+    if(lows[0]) { document.getElementById('lt1').textContent = lows[0].time;  document.getElementById('lt1h').textContent = `${lows[0].height}m`; }
+    if(highs[1]){ document.getElementById('ht2').textContent = highs[1].time; document.getElementById('ht2h').textContent = `${highs[1].height}m`; }
+    else if(lows[1]){ document.getElementById('ht2').textContent = lows[1].time; document.getElementById('ht2h').textContent = `${lows[1].height}m`; }
 
-    // Update disclaimer with station name
-    const disc = document.querySelector('#col-mid .disc');
-    if(disc) disc.innerHTML = `最近測站：${station.name} · 資料來源：中央氣象署`;
+    if(tideDisc) tideDisc.innerHTML = `最近測站：${loc.name} · 資料來源：中央氣象署`;
 
   } catch(e){
-    // Fallback: show dashes
+    console.warn('Tide fetch error:', e);
     ['ht1','lt1','ht2'].forEach(id => document.getElementById(id).textContent = '--:--');
     ['ht1h','lt1h','ht2h'].forEach(id => document.getElementById(id).textContent = '--m');
-    const disc = document.querySelector('#col-mid .disc');
-    if(disc) disc.innerHTML = `潮汐資料載入失敗 · 請查中央氣象署`;
+    if(tideDisc) tideDisc.innerHTML = `潮汐資料載入失敗（${loc.name}）· 請查中央氣象署`;
   }
 }
 
