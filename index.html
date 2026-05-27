@@ -60,17 +60,18 @@ body{font-family:var(--sans);color:#fff;}
 }
 
 /* ══════════════════════════════════
-   LANDSCAPE — 3-column grid
+   LANDSCAPE — 3-column grid + resizers
 ══════════════════════════════════ */
 @media (orientation:landscape){
-  #app{display:grid;grid-template-columns:280px 1fr 260px;grid-template-rows:100%;}
-  #col-map{grid-column:1;grid-row:1;display:flex;flex-direction:column;border-right:0.5px solid var(--border);overflow:hidden;}
-  #col-mid{grid-column:2;grid-row:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;}
+  #app{display:grid;grid-template-columns:280px 5px 1fr 5px 260px;grid-template-rows:100%;}
+  #col-map{grid-column:1;grid-row:1;display:flex;flex-direction:column;overflow:hidden;}
+  #resizer-1{grid-column:2;grid-row:1;}
+  #col-mid{grid-column:3;grid-row:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;}
   #col-mid::-webkit-scrollbar{display:none;}
-  #col-right{grid-column:3;grid-row:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;border-left:0.5px solid var(--border);}
+  #resizer-2{grid-column:4;grid-row:1;}
+  #col-right{grid-column:5;grid-row:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;}
   #col-right::-webkit-scrollbar{display:none;}
   #map{flex:1;min-height:0;}
-  /* in landscape, map fills left column, square-ish naturally */
 }
 
 /* ══════════════════════════════════
@@ -273,6 +274,30 @@ body{font-family:var(--sans);color:#fff;}
 /* DISCLAIMER */
 .disc{font-size:9px;color:var(--w30);text-align:center;padding:8px 14px;line-height:1.6;}
 
+/* RESIZER */
+.resizer{
+  width:5px; flex-shrink:0; cursor:col-resize;
+  background:transparent; position:relative; z-index:50;
+  transition:background .15s;
+  display:none; /* hidden in portrait */
+}
+.resizer::after{
+  content:''; position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width:1px; height:40px;
+  background:var(--border); border-radius:1px;
+  transition:background .15s, height .15s;
+}
+.resizer:hover::after, .resizer.dragging::after{
+  background:var(--accent); height:60px;
+}
+@media (orientation:landscape){
+  .resizer{ display:block; }
+}
+
+/* CREDIT */
+@media (orientation:landscape){ #credit-label{ display:block !important; } }
+
 /* LOADER */
 #loader{position:fixed;inset:0;background:var(--dark);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s;}
 #loader.gone{opacity:0;pointer-events:none;}
@@ -309,6 +334,7 @@ body{font-family:var(--sans);color:#fff;}
   <div id="dateline">---</div>
   <div class="tb-sep"></div>
   <div id="gps-pill"><div class="dot" id="gps-dot"></div><span id="gps-txt">定位中</span></div>
+  <div style="font-size:8px;color:var(--w30);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0;display:none;" id="credit-label">AERIAL DASHBOARD · 里卡豆</div>
 </div>
 
 <!-- APP -->
@@ -338,6 +364,9 @@ body{font-family:var(--sans);color:#fff;}
       <button id="locate-btn" onclick="locate()">⊕ 重新定位</button>
     </div>
   </div>
+
+  <!-- RESIZER 1 -->
+  <div class="resizer" id="resizer-1"></div>
 
   <!-- COL MID: SUN / WIND / TIDE -->
   <div id="col-mid">
@@ -419,6 +448,9 @@ body{font-family:var(--sans);color:#fff;}
 
   </div>
 
+  <!-- RESIZER 2 -->
+  <div class="resizer" id="resizer-2"></div>
+
   <!-- COL RIGHT: AIRPORT / NOTAM / WX / ASSESS -->
   <div id="col-right">
 
@@ -463,7 +495,7 @@ body{font-family:var(--sans);color:#fff;}
       <div id="assess-list"></div>
     </div>
 
-    <div class="disc">資料來源：open-meteo · SunCalc · 民航局 GeoJSON<br>分高度風速為估算值，飛行前請以官方資料為準</div>
+    <div class="disc">資料來源：open-meteo · SunCalc · 民航局 GeoJSON<br>分高度風速為估算值，飛行前請以官方資料為準<br><span style="color:var(--w30);letter-spacing:.08em;">AERIAL DASHBOARD BY 里卡豆 · 仟隅視覺有限公司</span></div>
   </div>
 
 </div><!-- /app -->
@@ -504,7 +536,7 @@ const AP_COORDS = {
   RCGM:{lat:24.8179,lng:120.9382},RCMQ:{lat:24.2647,lng:120.6219},
   RCNN:{lat:22.9503,lng:120.2063},RCKH:{lat:22.5773,lng:120.3500},
 };
-const KML_COLORS = ['#b8965a','#c084fc','#38bdf8','#f472b6','#34d399','#fb923c'];
+const KML_COLORS = ['#7dd3fc','#38bdf8','#0ea5e9','#bae6fd','#93c5fd','#60a5fa'];
 
 // ── STATE ──
 let lat=null, lng=null, map, userMk, radiusCir;
@@ -570,7 +602,7 @@ function loadNFZ(){
       const name=p['空域名稱']||p['name']||p['NAME']||'縣市禁飛紅區';
       const desc=p['空域說明']||p['條件說明']||'';
       const color='#ff4f41';
-      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:0.22,weight:1.5}});
+      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:0.17,weight:1.5}});
       lyr.bindPopup(`<div style="font-size:13px;font-weight:600;margin-bottom:4px;">${name}</div><div style="font-size:9px;padding:2px 7px;border-radius:3px;display:inline-block;background:${color}30;color:${color};">🚫 縣市禁飛紅區</div>${desc?`<div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>`:''}`);
       nfzLayers.county_red.addLayer(lyr);
     });
@@ -583,7 +615,7 @@ function loadNFZ(){
       const name=p['空域名稱']||p['name']||p['NAME']||'縣市黃區';
       const desc=p['空域說明']||p['條件說明']||'';
       const color='#ff9f0a';
-      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:0.15,weight:1.5,dashArray:'5,4'}});
+      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:0.10,weight:1.5,dashArray:'5,4'}});
       lyr.bindPopup(`<div style="font-size:13px;font-weight:600;margin-bottom:4px;">${name}</div><div style="font-size:9px;padding:2px 7px;border-radius:3px;display:inline-block;background:${color}30;color:${color};">⚠️ 縣市限制黃區</div>${desc?`<div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>`:''}`);
       nfzLayers.county_yellow.addLayer(lyr);
     });
@@ -598,7 +630,7 @@ function loadNFZ(){
       const label=isRed?'🚫 縣市禁飛紅區':'⚠️ 縣市限制黃區';
       const name=p['空域名稱']||p['name']||p['NAME']||label;
       const desc=p['空域說明']||p['條件說明']||'';
-      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:isRed?0.22:0.15,weight:1.5,dashArray:isRed?null:'5,4'}});
+      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:isRed?0.17:0.10,weight:1.5,dashArray:isRed?null:'5,4'}});
       lyr.bindPopup(`<div style="font-size:13px;font-weight:600;margin-bottom:4px;">${name}</div><div style="font-size:9px;padding:2px 7px;border-radius:3px;display:inline-block;background:${color}30;color:${color};">${label}</div>${desc?`<div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>`:''}`);
       if(isRed) nfzLayers.county_red.addLayer(lyr); else nfzLayers.county_yellow.addLayer(lyr);
     });
@@ -609,7 +641,7 @@ function loadNFZ(){
     data.features.forEach(f=>{
       const name=(f.properties||{})['name']||(f.properties||{})['空域名稱']||'國家公園';
       const color='#888';
-      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:0.15,weight:1.5,dashArray:'4,4'}});
+      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:0.10,weight:1.5,dashArray:'4,4'}});
       lyr.bindPopup(`<div style="font-size:13px;font-weight:600;margin-bottom:4px;">${name}</div><div style="font-size:9px;padding:2px 7px;border-radius:3px;display:inline-block;background:#88888830;color:#aaa;">🏔 國家公園</div>`);
       nfzLayers.park.addLayer(lyr);
     });
@@ -620,7 +652,7 @@ function loadNFZ(){
     data.features.forEach(f=>{
       const name=(f.properties||{})['name']||(f.properties||{})['空域名稱']||'商港';
       const color='#50a0ff';
-      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:0.15,weight:1.5}});
+      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:0.10,weight:1.5}});
       lyr.bindPopup(`<div style="font-size:13px;font-weight:600;margin-bottom:4px;">${name}</div><div style="font-size:9px;padding:2px 7px;border-radius:3px;display:inline-block;background:#50a0ff30;color:#50a0ff;">⚓ 商港</div>`);
       nfzLayers.port.addLayer(lyr);
     });
@@ -635,7 +667,7 @@ function loadNFZ(){
       const label=isRed?'🚫 臨時禁飛':'⚠️ 臨時限制區';
       const name=p['空域名稱']||p['name']||label;
       const desc=p['空域說明']||p['說明']||'';
-      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:isRed?0.25:0.15,weight:isRed?2:1.5,dashArray:isRed?null:'5,4'}});
+      const lyr=L.geoJSON(f,{style:{color,fillColor:color,fillOpacity:isRed?0.20:0.10,weight:isRed?2:1.5,dashArray:isRed?null:'5,4'}});
       lyr.bindPopup(`<div style="font-size:13px;font-weight:600;margin-bottom:4px;">${name}</div><div style="font-size:9px;padding:2px 7px;border-radius:3px;display:inline-block;background:${color}30;color:${color};">${label}</div>${desc?`<div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:4px;line-height:1.5;">${desc}</div>`:''}`);
       nfzLayers.temporary.addLayer(lyr);
     });
@@ -1019,6 +1051,122 @@ function renderNotams(){
   if(!notams.length){el.innerHTML=`<div style="font-size:9px;color:var(--w30);padding:3px 0;">尚未加入 NOTAM</div>`;return;}
   el.innerHTML=notams.map(n=>`<div class="notam-item"><div class="n-code">${n.code}</div><div class="n-info">手動輸入<br><span style="color:var(--w30);">${n.time}</span></div><div class="n-del" onclick="removeNotam('${n.code}')">✕</div></div>`).join('');
 }
+
+// ── RESIZER ──
+(function(){
+  const MIN_COL = 160; // minimum column width px
+  const STORAGE_KEY = 'ka_col_widths';
+
+  function isLandscape(){ return window.innerWidth > window.innerHeight; }
+
+  function getApp(){ return document.getElementById('app'); }
+
+  // Parse current grid cols → [w1, w2, w3] in px
+  function getCols(){
+    const cols = getComputedStyle(getApp()).gridTemplateColumns.split(' ');
+    // cols = [w1, '5px', w2, '5px', w3]
+    return [parseFloat(cols[0]), parseFloat(cols[2]), parseFloat(cols[4])];
+  }
+
+  function setCols(w1, w2, w3){
+    getApp().style.gridTemplateColumns = `${w1}px 5px ${w2}px 5px ${w3}px`;
+    // notify map to resize
+    if(typeof map !== 'undefined' && map) map.invalidateSize();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([w1, w2, w3]));
+  }
+
+  // Restore saved widths on load
+  function restoreWidths(){
+    if(!isLandscape()) return;
+    try{
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if(saved && saved.length === 3){
+        const total = window.innerWidth - 10; // 2 resizers × 5px
+        // scale to current viewport if window size changed
+        const savedTotal = saved[0] + saved[1] + saved[2];
+        const scale = total / savedTotal;
+        setCols(
+          Math.max(MIN_COL, Math.round(saved[0] * scale)),
+          Math.max(MIN_COL, Math.round(saved[1] * scale)),
+          Math.max(MIN_COL, Math.round(saved[2] * scale))
+        );
+      }
+    }catch(e){}
+  }
+
+  function initResizer(resizerId, colIndex){
+    const el = document.getElementById(resizerId);
+    if(!el) return;
+
+    let startX, startCols;
+
+    function onStart(clientX){
+      if(!isLandscape()) return;
+      startX = clientX;
+      startCols = getCols();
+      el.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    function onMove(clientX){
+      if(startX === undefined) return;
+      const dx = clientX - startX;
+      let [w1, w2, w3] = startCols;
+      const total = w1 + w2 + w3;
+
+      if(colIndex === 0){
+        // resizer-1: between col1 and col2
+        w1 = Math.max(MIN_COL, Math.min(total - MIN_COL*2, w1 + dx));
+        w2 = Math.max(MIN_COL, total - w1 - w3);
+      } else {
+        // resizer-2: between col2 and col3
+        w3 = Math.max(MIN_COL, Math.min(total - MIN_COL*2, w3 - dx));
+        w2 = Math.max(MIN_COL, total - w1 - w3);
+      }
+      setCols(w1, w2, w3);
+    }
+
+    function onEnd(){
+      startX = undefined;
+      el.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    // Mouse
+    el.addEventListener('mousedown', e=>{ e.preventDefault(); onStart(e.clientX); });
+    document.addEventListener('mousemove', e=>{ if(startX!==undefined) onMove(e.clientX); });
+    document.addEventListener('mouseup', onEnd);
+
+    // Touch
+    el.addEventListener('touchstart', e=>{ e.preventDefault(); onStart(e.touches[0].clientX); }, {passive:false});
+    document.addEventListener('touchmove', e=>{ if(startX!==undefined){ e.preventDefault(); onMove(e.touches[0].clientX); } }, {passive:false});
+    document.addEventListener('touchend', onEnd);
+  }
+
+  // Double-click resizer → reset to default
+  function initDoubleClick(resizerId){
+    document.getElementById(resizerId)?.addEventListener('dblclick', ()=>{
+      localStorage.removeItem(STORAGE_KEY);
+      getApp().style.gridTemplateColumns = '';
+      setTimeout(()=>{ if(typeof map!=='undefined'&&map) map.invalidateSize(); }, 100);
+    });
+  }
+
+  window.addEventListener('load', ()=>{
+    initResizer('resizer-1', 0);
+    initResizer('resizer-2', 1);
+    initDoubleClick('resizer-1');
+    initDoubleClick('resizer-2');
+    setTimeout(restoreWidths, 200);
+  });
+
+  // Re-apply on orientation change
+  window.addEventListener('resize', ()=>{
+    if(isLandscape()) setTimeout(restoreWidths, 350);
+  });
+})();
 
 // ── INIT ──
 window.addEventListener('load',()=>{
