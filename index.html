@@ -142,6 +142,19 @@ body{font-family:var(--sans);color:#fff;}
 #locate-btn{width:100%;background:transparent;border:0.5px solid var(--accent-bd);border-radius:6px;color:var(--accent);font-size:10px;padding:6px;cursor:pointer;letter-spacing:.07em;transition:all .12s;text-align:center;}
 #locate-btn:hover{background:var(--accent);color:#000;}
 
+/* SEARCH */
+#search-wrap{padding:0 10px 8px;flex-shrink:0;position:relative;}
+#search-input{width:100%;background:var(--card);border:0.5px solid var(--border);border-radius:6px;color:#fff;font-size:11px;padding:6px 30px 6px 10px;outline:none;letter-spacing:.03em;}
+#search-input:focus{border-color:var(--accent-bd);}
+#search-input::placeholder{color:var(--w30);font-size:10px;}
+#search-clear{position:absolute;right:18px;top:50%;transform:translateY(-50%);color:var(--w30);font-size:14px;cursor:pointer;display:none;line-height:1;}
+#search-clear:hover{color:var(--w70);}
+#search-results{position:absolute;left:10px;right:10px;top:calc(100% - 8px);z-index:600;background:rgba(20,18,16,0.97);border:0.5px solid var(--border);border-radius:6px;overflow:hidden;display:none;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
+.search-item{padding:8px 12px;font-size:11px;cursor:pointer;border-bottom:0.5px solid var(--border2);color:var(--w85);transition:background .1s;}
+.search-item:last-child{border-bottom:none;}
+.search-item:hover{background:var(--accent-bg);}
+.search-item-sub{font-size:9px;color:var(--w55);margin-top:1px;}
+
 /* SECTION */
 .sec{padding:12px 14px;border-bottom:0.5px solid var(--border);background:rgba(26,25,23,0.4);}
 .sec-title{font-size:8px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:6px;}
@@ -364,6 +377,12 @@ body{font-family:var(--sans);color:#fff;}
 
     <div id="locate-btn-wrap">
       <button id="locate-btn" onclick="locate()">⊕ 重新定位</button>
+    </div>
+    <div id="search-wrap">
+      <input type="text" id="search-input" placeholder="搜尋地名、地址..." autocomplete="off"
+             oninput="onSearchInput(this.value)" onkeydown="onSearchKey(event)">
+      <span id="search-clear" onclick="clearSearch()">✕</span>
+      <div id="search-results"></div>
     </div>
   </div>
 
@@ -1053,6 +1072,90 @@ function renderNotams(){
   if(!notams.length){el.innerHTML=`<div style="font-size:9px;color:var(--w30);padding:3px 0;">尚未加入 NOTAM</div>`;return;}
   el.innerHTML=notams.map(n=>`<div class="notam-item"><div class="n-code">${n.code}</div><div class="n-info">手動輸入<br><span style="color:var(--w30);">${n.time}</span></div><div class="n-del" onclick="removeNotam('${n.code}')">✕</div></div>`).join('');
 }
+
+const GMAP_KEY = 'AIzaSyC6FIbAT7mT9sUY3W8H4VwMtQfGXURzu00';
+let searchTimer = null;
+let searchMarker = null;
+
+function onSearchInput(val){
+  const clear = document.getElementById('search-clear');
+  clear.style.display = val ? 'block' : 'none';
+  clearTimeout(searchTimer);
+  if(val.length < 2){ hideResults(); return; }
+  searchTimer = setTimeout(()=>geocodeSearch(val), 400);
+}
+
+function onSearchKey(e){
+  if(e.key === 'Escape') clearSearch();
+  if(e.key === 'Enter'){
+    clearTimeout(searchTimer);
+    geocodeSearch(document.getElementById('search-input').value);
+  }
+}
+
+async function geocodeSearch(query){
+  try{
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&region=tw&language=zh-TW&key=${GMAP_KEY}`;
+    const d = await(await fetch(url)).json();
+    if(d.status !== 'OK' || !d.results.length){ hideResults(); return; }
+    showResults(d.results.slice(0,5));
+  }catch(e){ hideResults(); }
+}
+
+function showResults(results){
+  const el = document.getElementById('search-results');
+  el.style.display = 'block';
+  el.innerHTML = results.map((r,i)=>{
+    const main = r.address_components[0]?.long_name || r.formatted_address.split(',')[0];
+    const sub  = r.formatted_address;
+    return `<div class="search-item" onclick="selectResult(${r.geometry.location.lat},${r.geometry.location.lng},'${main.replace(/'/g,"\\'")}')">
+      <div>${main}</div>
+      <div class="search-item-sub">${sub}</div>
+    </div>`;
+  }).join('');
+}
+
+function hideResults(){
+  document.getElementById('search-results').style.display = 'none';
+}
+
+function selectResult(rlat, rlng, name){
+  hideResults();
+  document.getElementById('search-input').value = name;
+
+  // Remove previous search marker
+  if(searchMarker) map.removeLayer(searchMarker);
+
+  // Add pin marker
+  const ic = L.divIcon({
+    html:`<div style="background:var(--accent,#b8965a);width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
+    className:'', iconAnchor:[6,6]
+  });
+  searchMarker = L.marker([rlat, rlng], {icon:ic})
+    .addTo(map)
+    .bindPopup(`<b>${name}</b>`)
+    .openPopup();
+
+  map.setView([rlat, rlng], 14);
+
+  // Also update sun info to searched location
+  lat = rlat; lng = rlng;
+  updateSun();
+  fetchWeather();
+  setGPS(`${rlat.toFixed(4)}, ${rlng.toFixed(4)}`,'g');
+}
+
+function clearSearch(){
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-clear').style.display = 'none';
+  hideResults();
+  if(searchMarker){ map.removeLayer(searchMarker); searchMarker = null; }
+}
+
+// Close results when clicking outside
+document.addEventListener('click', e=>{
+  if(!document.getElementById('search-wrap')?.contains(e.target)) hideResults();
+});
 
 // ── RESIZER ──
 (function(){
