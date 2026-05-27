@@ -921,40 +921,50 @@ async function fetchTides(){
     const res = await fetch(url);
     const json = await res.json();
 
-    // Navigate JSON structure: records.Tide[].Daily[].Time[]
-    const tideArr = json?.records?.Tide;
-    if(!tideArr || !tideArr.length) throw new Error('no tide records');
+    // Correct structure: records.TideForecasts[].Location
+    const forecasts = json?.records?.TideForecasts;
+    if(!forecasts || !forecasts.length) throw new Error('no TideForecasts');
 
-    const daily = tideArr[0]?.Daily;
-    if(!daily || !daily.length) throw new Error('no daily');
+    const locationData = forecasts.find(
+      item => item.Location?.LocationName === loc.name
+    );
+    if(!locationData) throw new Error(`找不到測站: ${loc.name}`);
 
-    // Get today's data (first entry)
+    // Daily tides: Location.TimePeriods.Daily[]
+    const daily = locationData.Location?.TimePeriods?.Daily;
+    if(!daily || !daily.length) throw new Error('no Daily');
+
+    // Today = first entry, Time[] has individual high/low records
     const times = daily[0]?.Time || [];
-    if(!times.length) throw new Error('no times');
+    if(!times.length) throw new Error('no Time entries');
 
-    // Parse high/low tides
     const tides = times.map(t => ({
-      type:   t.TideRange,          // 滿潮 or 乾潮
+      type:   t.TideRange,   // '滿潮' or '乾潮'
       time:   t.DateTime ? t.DateTime.slice(11,16) : '--:--',
-      height: parseFloat(
-        t.TideHeights?.AboveMSL ??
-        t.TideHeights?.AboveChartDatum ??
-        t.TideHeights?.LandSurveyDatum ?? 0
-      ).toFixed(2)
+      height: (() => {
+        const h = t.TideHeights;
+        const v = h?.AboveMSL ?? h?.AboveChartDatum ?? h?.LandSurveyDatum;
+        return v != null ? parseFloat(v).toFixed(2) : '--';
+      })()
     }));
 
     const highs = tides.filter(t => t.type === '滿潮');
     const lows  = tides.filter(t => t.type === '乾潮');
 
-    if(highs[0]){ document.getElementById('ht1').textContent = highs[0].time; document.getElementById('ht1h').textContent = `${highs[0].height}m`; }
-    if(lows[0]) { document.getElementById('lt1').textContent = lows[0].time;  document.getElementById('lt1h').textContent = `${lows[0].height}m`; }
-    if(highs[1]){ document.getElementById('ht2').textContent = highs[1].time; document.getElementById('ht2h').textContent = `${highs[1].height}m`; }
-    else if(lows[1]){ document.getElementById('ht2').textContent = lows[1].time; document.getElementById('ht2h').textContent = `${lows[1].height}m`; }
+    const fill = (id, timeId, heightId, data) => {
+      if(!data) return;
+      document.getElementById(timeId).textContent   = data.time;
+      document.getElementById(heightId).textContent = data.height !== '--' ? `${data.height}m` : '--m';
+    };
+
+    fill('ht1', 'ht1', 'ht1h', highs[0]);
+    fill('lt1', 'lt1', 'lt1h', lows[0]);
+    fill('ht2', 'ht2', 'ht2h', highs[1] || lows[1]);
 
     if(tideDisc) tideDisc.innerHTML = `最近測站：${loc.name} · 資料來源：中央氣象署`;
 
   } catch(e){
-    console.warn('Tide fetch error:', e);
+    console.warn('Tide fetch error:', e.message);
     ['ht1','lt1','ht2'].forEach(id => document.getElementById(id).textContent = '--:--');
     ['ht1h','lt1h','ht2h'].forEach(id => document.getElementById(id).textContent = '--m');
     if(tideDisc) tideDisc.innerHTML = `潮汐資料載入失敗（${loc.name}）· 請查中央氣象署`;
