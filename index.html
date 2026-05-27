@@ -759,8 +759,8 @@ function onPos(p){
   setGPS(`${lat.toFixed(4)}, ${lng.toFixed(4)}`,'g');
   if(userMk) map.removeLayer(userMk);
   if(radiusCir) map.removeLayer(radiusCir);
-  userMk=L.circleMarker([lat,lng],{radius:8,fillColor:'#b8965a',fillOpacity:1,color:'#fff',weight:2}).addTo(map).bindPopup('📍 目前位置');
-  radiusCir=L.circle([lat,lng],{radius:5000,color:'#b8965a',weight:1,fillOpacity:.04,dashArray:'4 4'}).addTo(map);
+  userMk=L.circleMarker([lat,lng],{radius:8,fillColor:'#32d264',fillOpacity:1,color:'#fff',weight:2}).addTo(map).bindPopup('📍 目前位置');
+  radiusCir=L.circle([lat,lng],{radius:5000,color:'#32d264',weight:1,fillOpacity:.04,dashArray:'4 4'}).addTo(map);
   map.setView([lat,lng],12);
   updateSun(); fetchWeather();
   setTimeout(()=>document.getElementById('loader').classList.add('gone'),900);
@@ -1106,9 +1106,11 @@ function showResults(results){
   const el = document.getElementById('search-results');
   el.style.display = 'block';
   el.innerHTML = results.map((r,i)=>{
-    const main = r.address_components[0]?.long_name || r.formatted_address.split(',')[0];
-    const sub  = r.formatted_address;
-    return `<div class="search-item" onclick="selectResult(${r.geometry.location.lat},${r.geometry.location.lng},'${main.replace(/'/g,"\\'")}')">
+    // Use formatted_address split for better name display
+    const parts = r.formatted_address.split(',');
+    const main = parts.slice(0, 2).join(',').trim();
+    const sub  = parts.slice(2).join(',').trim() || r.formatted_address;
+    return `<div class="search-item" onclick="selectResult(${r.geometry.location.lat},${r.geometry.location.lng},'${r.formatted_address.replace(/'/g,"\\'")}')">
       <div>${main}</div>
       <div class="search-item-sub">${sub}</div>
     </div>`;
@@ -1126,9 +1128,9 @@ function selectResult(rlat, rlng, name){
   // Remove previous search marker
   if(searchMarker) map.removeLayer(searchMarker);
 
-  // Add pin marker
+  // Add pin marker — blue
   const ic = L.divIcon({
-    html:`<div style="background:var(--accent,#b8965a);width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
+    html:`<div style="background:#50a0ff;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
     className:'', iconAnchor:[6,6]
   });
   searchMarker = L.marker([rlat, rlng], {icon:ic})
