@@ -464,7 +464,7 @@ body{font-family:var(--sans);color:#fff;}
         <div class="card"><div class="tide-type">乾潮</div><div class="tide-time" id="lt1">--:--</div><div class="tide-h" id="lt1h">--m</div></div>
         <div class="card"><div class="tide-type">滿潮</div><div class="tide-time" id="ht2">--:--</div><div class="tide-h" id="ht2h">--m</div></div>
       </div>
-      <div class="disc">※ 近似估算，正式作業請查中央氣象署</div>
+      <div class="disc" id="tide-disc">最近測站：偵測中 · 資料來源：中央氣象署</div>
     </div>
 
   </div>
@@ -758,9 +758,8 @@ function onPos(p){
   lat=p.coords.latitude; lng=p.coords.longitude;
   setGPS(`${lat.toFixed(4)}, ${lng.toFixed(4)}`,'g');
   if(userMk) map.removeLayer(userMk);
-  if(radiusCir) map.removeLayer(radiusCir);
+  if(radiusCir){ map.removeLayer(radiusCir); radiusCir=null; }
   userMk=L.circleMarker([lat,lng],{radius:8,fillColor:'#32d264',fillOpacity:1,color:'#fff',weight:2}).addTo(map).bindPopup('📍 目前位置');
-  radiusCir=L.circle([lat,lng],{radius:5000,color:'#32d264',weight:1,fillOpacity:.04,dashArray:'4 4'}).addTo(map);
   map.setView([lat,lng],12);
   updateSun(); fetchWeather();
   setTimeout(()=>document.getElementById('loader').classList.add('gone'),900);
@@ -818,7 +817,7 @@ async function fetchWeather(){
     updateBeaufort(ws10);
     renderWindAlt(ws10);
     updateAssessment(ws10,wg,c.visibility,c.cloud_cover);
-    estimateTides();
+    fetchTides();
     ldStatus('完成');
   }catch(e){ldStatus('天氣載入失敗');}
 }
@@ -881,13 +880,81 @@ function renderWindAlt(ws){
   document.getElementById('drone-table').innerHTML=dt;
 }
 
-// ── TIDE ──
-function estimateTides(){
-  const now=new Date(), period=12.42*60, lunar=(now.getTime()/60000)%period, offset=period/4;
-  const toTime=d=>{const t=new Date(now);let diff=d-lunar;if(diff<0)diff+=period;t.setMinutes(t.getMinutes()+diff);return fmt(t);};
-  document.getElementById('ht1').textContent=toTime(0); document.getElementById('ht1h').textContent='~1.2m';
-  document.getElementById('lt1').textContent=toTime(offset); document.getElementById('lt1h').textContent='~0.2m';
-  document.getElementById('ht2').textContent=toTime(period/2); document.getElementById('ht2h').textContent='~1.0m';
+// ── TIDE (CWA Real Data) ──
+const CWA_KEY = 'CWA-88714A94-2A9A-4B48-B5E4-E7595BDF48D9';
+
+// 台灣主要潮汐測站
+const TIDE_STATIONS = [
+  { id:'46694', name:'基隆',   lat:25.1437, lng:121.7412 },
+  { id:'46755', name:'淡水',   lat:25.1681, lng:121.4342 },
+  { id:'46739', name:'台中港', lat:24.2678, lng:120.5208 },
+  { id:'46730', name:'安平',   lat:22.9908, lng:120.1614 },
+  { id:'46744', name:'高雄',   lat:22.6167, lng:120.2667 },
+  { id:'46699', name:'花蓮',   lat:23.9750, lng:121.6167 },
+  { id:'46706', name:'蘇澳',   lat:24.5958, lng:121.8583 },
+  { id:'46761', name:'澎湖',   lat:23.5622, lng:119.5706 },
+  { id:'46759', name:'金門',   lat:24.4333, lng:118.3833 },
+];
+
+function nearestTideStation(userLat, userLng){
+  let best = TIDE_STATIONS[0], minD = Infinity;
+  TIDE_STATIONS.forEach(s=>{
+    const d = Math.hypot(s.lat - userLat, s.lng - userLng);
+    if(d < minD){ minD = d; best = s; }
+  });
+  return best;
+}
+
+async function fetchTides(){
+  if(!lat || !lng) return;
+  const station = nearestTideStation(lat, lng);
+  const today = new Date().toISOString().slice(0,10);
+
+  try{
+    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&StationID=${station.id}&Date=${today}`;
+    const res = await fetch(url);
+    const json = await res.json();
+
+    const records = json?.records?.Tide?.[0]?.Daily?.[0]?.Time;
+    if(!records || !records.length) throw new Error('no data');
+
+    // Filter high/low tides for today
+    const tides = records
+      .map(t => ({
+        type: t.TideRange,   // 滿潮 / 乾潮
+        time: t.DateTime.slice(11,16),
+        height: parseFloat(t.TideHeights?.AboveChartDatum || t.TideHeights?.AboveMSL || 0)
+      }))
+      .filter(t => t.type === '滿潮' || t.type === '乾潮');
+
+    const highs = tides.filter(t => t.type === '滿潮');
+    const lows  = tides.filter(t => t.type === '乾潮');
+
+    // Fill UI — up to 2 highs, 1 low shown
+    if(highs[0]){
+      document.getElementById('ht1').textContent = highs[0].time;
+      document.getElementById('ht1h').textContent = `${highs[0].height.toFixed(2)}m`;
+    }
+    if(lows[0]){
+      document.getElementById('lt1').textContent = lows[0].time;
+      document.getElementById('lt1h').textContent = `${lows[0].height.toFixed(2)}m`;
+    }
+    if(highs[1]){
+      document.getElementById('ht2').textContent = highs[1].time;
+      document.getElementById('ht2h').textContent = `${highs[1].height.toFixed(2)}m`;
+    }
+
+    // Update disclaimer with station name
+    const disc = document.querySelector('#col-mid .disc');
+    if(disc) disc.innerHTML = `最近測站：${station.name} · 資料來源：中央氣象署`;
+
+  } catch(e){
+    // Fallback: show dashes
+    ['ht1','lt1','ht2'].forEach(id => document.getElementById(id).textContent = '--:--');
+    ['ht1h','lt1h','ht2h'].forEach(id => document.getElementById(id).textContent = '--m');
+    const disc = document.querySelector('#col-mid .disc');
+    if(disc) disc.innerHTML = `潮汐資料載入失敗 · 請查中央氣象署`;
+  }
 }
 
 const AIR = '3c10eb91-993a-4100-a3b3-e0cd809b2df6';
@@ -1128,15 +1195,10 @@ function selectResult(rlat, rlng, name){
   // Remove previous search marker
   if(searchMarker) map.removeLayer(searchMarker);
 
-  // Add pin marker — blue
-  const ic = L.divIcon({
-    html:`<div style="background:#50a0ff;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
-    className:'', iconAnchor:[6,6]
-  });
-  searchMarker = L.marker([rlat, rlng], {icon:ic})
-    .addTo(map)
-    .bindPopup(`<b>${name}</b>`)
-    .openPopup();
+  // Add pin marker — blue circleMarker
+  searchMarker = L.circleMarker([rlat, rlng], {
+    radius:8, fillColor:'#50a0ff', fillOpacity:1, color:'#fff', weight:2
+  }).addTo(map).bindPopup(`<b>${name}</b>`).openPopup();
 
   map.setView([rlat, rlng], 14);
 
