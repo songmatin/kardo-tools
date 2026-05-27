@@ -460,9 +460,9 @@ body{font-family:var(--sans);color:#fff;}
     <div class="sec">
       <div class="sec-title">Tide · 潮汐估算</div>
       <div class="card-grid" id="tide-grid">
-        <div class="card"><div class="tide-type">滿潮</div><div class="tide-time" id="ht1">--:--</div><div class="tide-h" id="ht1h">--m</div></div>
-        <div class="card"><div class="tide-type">乾潮</div><div class="tide-time" id="lt1">--:--</div><div class="tide-h" id="lt1h">--m</div></div>
-        <div class="card"><div class="tide-type">滿潮</div><div class="tide-time" id="ht2">--:--</div><div class="tide-h" id="ht2h">--m</div></div>
+        <div class="card"><div class="tide-type">滿潮</div><div class="tide-time" id="ht1">--:--</div><div class="tide-h" id="ht1h">--cm</div></div>
+        <div class="card"><div class="tide-type">乾潮</div><div class="tide-time" id="lt1">--:--</div><div class="tide-h" id="lt1h">--cm</div></div>
+        <div class="card"><div class="tide-type">滿潮</div><div class="tide-time" id="ht2">--:--</div><div class="tide-h" id="ht2h">--cm</div></div>
       </div>
       <div class="disc" id="tide-disc">最近測站：偵測中 · 資料來源：中央氣象署</div>
     </div>
@@ -939,27 +939,27 @@ async function fetchTides(){
     if(!times.length) throw new Error('no Time entries');
 
     const tides = times.map(t => ({
-      type:   t.TideRange,   // '滿潮' or '乾潮'
+      type:   t.Tide,        // '滿潮' or '乾潮'（正確欄位名稱）
       time:   t.DateTime ? t.DateTime.slice(11,16) : '--:--',
       height: (() => {
         const h = t.TideHeights;
-        const v = h?.AboveMSL ?? h?.AboveChartDatum ?? h?.LandSurveyDatum;
-        return v != null ? parseFloat(v).toFixed(2) : '--';
+        const v = h?.AboveChartDatum ?? h?.AboveMSL ?? h?.LandSurveyDatum;
+        return v != null ? parseInt(v) : '--';  // cm，直接取整數
       })()
     }));
 
     const highs = tides.filter(t => t.type === '滿潮');
     const lows  = tides.filter(t => t.type === '乾潮');
 
-    const fill = (id, timeId, heightId, data) => {
+    const fill = (timeId, heightId, data) => {
       if(!data) return;
       document.getElementById(timeId).textContent   = data.time;
-      document.getElementById(heightId).textContent = data.height !== '--' ? `${data.height}m` : '--m';
+      document.getElementById(heightId).textContent = data.height !== '--' ? `${data.height}cm` : '--cm';
     };
 
-    fill('ht1', 'ht1', 'ht1h', highs[0]);
-    fill('lt1', 'lt1', 'lt1h', lows[0]);
-    fill('ht2', 'ht2', 'ht2h', highs[1] || lows[1]);
+    fill('ht1', 'ht1h', highs[0]);
+    fill('lt1', 'lt1h', lows[0]);
+    fill('ht2', 'ht2h', highs[1] || lows[1]);
 
     if(tideDisc) tideDisc.innerHTML = `最近測站：${loc.name} · 資料來源：中央氣象署`;
 
