@@ -1162,28 +1162,37 @@ const AQI_COLORS = {
 async function fetchAQI(){
   if(!lat || !lng) return;
   try{
-    // WAQI：支援台灣所有測站，直接用 GPS 座標查詢最近站
-    const token = 'a0f8eed864ef244f62572c4611beaca3e7ea889c';
-    const url = `https://api.waqi.info/feed/geo:${lat};${lng}/?token=${token}`;
+    const key = 'c29131c1-b41d-46ed-915c-2f9c2b6271d8';
+    const url = `https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=${key}&limit=1000&format=JSON`;
     const res = await fetch(url);
     const json = await res.json();
-    if(json.status !== 'ok') throw new Error(json.data || 'WAQI error');
+    const records = json?.records;
+    if(!records || !records.length) throw new Error('no records');
 
-    const d      = json.data;
-    const aqi    = d.aqi;
-    const stn    = d.city?.name || '--';
-    const pm25   = d.iaqi?.pm25?.v ?? '--';
-    const pm10   = d.iaqi?.pm10?.v ?? '--';
-    const o3     = d.iaqi?.o3?.v   ?? '--';
+    // 找最近測站
+    let best = null, minD = Infinity;
+    records.forEach(r => {
+      const rlat = parseFloat(r.latitude), rlng = parseFloat(r.longitude);
+      if(isNaN(rlat)||isNaN(rlng)) return;
+      const d = Math.hypot(rlat - lat, rlng - lng);
+      if(d < minD){ minD = d; best = r; }
+    });
+    if(!best) throw new Error('no nearest station');
 
-    // AQI 等級判斷
+    const aqi  = parseInt(best.aqi) || 0;
+    const stn  = best.sitename || '--';
+    const pm25 = best['pm2.5'] ?? best.pm25 ?? '--';
+    const pm10 = best.pm10 ?? '--';
+    const o3   = best.o3   ?? '--';
+
+    // AQI 等級
     let status, col;
-    if     (aqi <= 50)  { status='良好';              col={bg:'#32d264',text:'#000'}; }
-    else if(aqi <= 100) { status='普通';              col={bg:'#ffd60a',text:'#000'}; }
-    else if(aqi <= 150) { status='對敏感族群不健康';  col={bg:'#ff9f0a',text:'#000'}; }
-    else if(aqi <= 200) { status='不健康';            col={bg:'#ff4f41',text:'#fff'}; }
-    else if(aqi <= 300) { status='非常不健康';        col={bg:'#c084fc',text:'#fff'}; }
-    else                { status='有害';              col={bg:'#7f1d1d',text:'#fff'}; }
+    if     (aqi<=50)  {status='良好';             col={bg:'#32d264',text:'#000'};}
+    else if(aqi<=100) {status='普通';             col={bg:'#ffd60a',text:'#000'};}
+    else if(aqi<=150) {status='對敏感族群不健康'; col={bg:'#ff9f0a',text:'#000'};}
+    else if(aqi<=200) {status='不健康';           col={bg:'#ff4f41',text:'#fff'};}
+    else if(aqi<=300) {status='非常不健康';       col={bg:'#c084fc',text:'#fff'};}
+    else              {status='有害';             col={bg:'#7f1d1d',text:'#fff'};}
 
     const badge = document.getElementById('aqi-badge');
     badge.textContent      = aqi;
@@ -1199,12 +1208,12 @@ async function fetchAQI(){
 
     const pm25v = parseFloat(pm25);
     document.getElementById('aqi-pm25').style.color =
-      pm25v < 15 ? 'var(--green)' : pm25v < 35 ? 'var(--orange)' : 'var(--red)';
+      pm25v<15?'var(--green)':pm25v<35?'var(--orange)':'var(--red)';
 
   } catch(e){
-    console.warn('AQI fetch error:', e.message);
+    console.warn('AQI error:', e.message);
     document.getElementById('aqi-status').textContent  = '資料載入失敗';
-    document.getElementById('aqi-station').textContent = '請稍後再試';
+    document.getElementById('aqi-station').textContent = e.message;
   }
 }
 
