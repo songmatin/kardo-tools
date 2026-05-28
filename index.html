@@ -294,6 +294,14 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 
 /* WEATHER */
 #wx-grid{grid-template-columns:1fr 1fr;}
+/* 逐時預報 */
+#wx-hourly-wrap::-webkit-scrollbar{display:none;}
+.wx-hour{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 6px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);min-width:46px;flex-shrink:0;}
+.wx-hour.now{border-color:var(--accent-bd);background:var(--accent-bg);}
+.wx-hour-time{font-size:8px;color:var(--w55);letter-spacing:.04em;font-family:var(--mono);}
+.wx-hour-icon{font-size:18px;line-height:1;}
+.wx-hour-temp{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--w85);}
+.wx-hour-wind{font-size:8px;color:var(--w30);font-family:var(--mono);}
 
 /* FLIGHT */
 #flight-status-bar{
@@ -571,6 +579,10 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 
     <div class="sec">
       <div class="sec-title">Weather · 天氣</div>
+      <!-- 逐時預報 -->
+      <div id="wx-hourly-wrap" style="overflow-x:auto;scrollbar-width:none;margin-bottom:8px;">
+        <div id="wx-hourly" style="display:flex;gap:4px;min-width:max-content;padding-bottom:2px;"></div>
+      </div>
       <div class="card-grid" id="wx-grid">
         <div class="card"><div class="card-label">溫度</div><div class="card-val" id="wx-temp" style="color:var(--blue);">--<span class="card-unit">°C</span></div></div>
         <div class="card"><div class="card-label">濕度</div><div class="card-val" id="wx-hum" style="color:var(--blue);">--<span class="card-unit">%</span></div></div>
@@ -946,7 +958,7 @@ function updateSun(){
 async function fetchWeather(){
   ldStatus('載入天氣...');
   try{
-    const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,visibility,cloud_cover&wind_speed_unit=ms&timezone=Asia%2FTaipei`;
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,visibility,cloud_cover&hourly=temperature_2m,weathercode,windspeed_10m,precipitation_probability&wind_speed_unit=ms&timezone=Asia%2FTaipei&forecast_days=1`;
     const d=await(await fetch(u)).json();
     const c=d.current;
     ws10=c.wind_speed_10m;
@@ -965,11 +977,70 @@ async function fetchWeather(){
     updateBeaufort(ws10);
     renderWindAlt(ws10);
     updateAssessment(ws10,wg,c.visibility,c.cloud_cover);
+
+    // 逐時預報
+    if(d.hourly) renderHourly(d.hourly);
+
     // 獨立執行，不讓任一失敗中斷其他
     fetchTides().catch(e=>console.warn('Tide error:',e));
     fetchAQI().catch(e=>console.warn('AQI error:',e));
     ldStatus('完成');
   }catch(e){ldStatus('天氣載入失敗');}
+}
+
+// WMO weather code → emoji + 中文
+function wxIcon(code){
+  if(code===0)                      return {e:'☀️', t:'晴'};
+  if(code<=2)                       return {e:'🌤️', t:'多雲'};
+  if(code===3)                      return {e:'☁️', t:'陰'};
+  if(code<=49)                      return {e:'🌫️', t:'霧'};
+  if(code<=59)                      return {e:'🌦️', t:'毛雨'};
+  if(code<=69)                      return {e:'🌧️', t:'雨'};
+  if(code<=79)                      return {e:'🌨️', t:'雪'};
+  if(code<=82)                      return {e:'🌧️', t:'陣雨'};
+  if(code<=84)                      return {e:'🌧️', t:'大陣雨'};
+  if(code<=94)                      return {e:'⛈️', t:'雷雨'};
+  return                                   {e:'⛈️', t:'強雷'};
+}
+
+function renderHourly(hourly){
+  const el = document.getElementById('wx-hourly');
+  if(!el) return;
+  const now = new Date();
+  const nowH = now.getHours();
+  // 顯示現在 + 接下來 11 小時（共 12 格）
+  const times = hourly.time || [];
+  const temps = hourly.temperature_2m || [];
+  const codes = hourly.weathercode || [];
+  const winds = hourly.windspeed_10m || [];
+  const pops  = hourly.precipitation_probability || [];
+
+  // 找到當前小時的 index
+  const startIdx = times.findIndex(t => {
+    const h = new Date(t).getHours();
+    return h === nowH;
+  });
+  if(startIdx < 0){ el.innerHTML=''; return; }
+
+  let html = '';
+  for(let i = startIdx; i < Math.min(startIdx + 12, times.length); i++){
+    const isNow = i === startIdx;
+    const hLabel = isNow ? '現在' : `${new Date(times[i]).getHours()}時`;
+    const temp = temps[i] != null ? Math.round(temps[i]) : '--';
+    const icon = wxIcon(codes[i] ?? 0);
+    const wind = winds[i] != null ? winds[i].toFixed(1) : '--';
+    const pop  = pops[i]  != null ? pops[i]  : null;
+    const windColor = winds[i] < 5 ? 'var(--green)' : winds[i] < 8 ? 'var(--orange)' : 'var(--red)';
+
+    html += `<div class="wx-hour${isNow?' now':''}">
+      <div class="wx-hour-time">${hLabel}</div>
+      <div class="wx-hour-icon" title="${icon.t}">${icon.e}</div>
+      <div class="wx-hour-temp">${temp}°</div>
+      <div class="wx-hour-wind" style="color:${windColor};">${wind}<span style="color:var(--w30);font-size:7px;">m/s</span></div>
+      ${pop != null ? `<div class="wx-hour-wind" style="color:var(--blue);">${pop}%</div>` : ''}
+    </div>`;
+  }
+  el.innerHTML = html;
 }
 
 // ── BEAUFORT ──
