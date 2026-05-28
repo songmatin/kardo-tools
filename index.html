@@ -273,6 +273,9 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 #notam-input{flex:1;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);color:#fff;font-family:var(--mono);font-size:11px;padding:6px 10px;letter-spacing:.07em;outline:none;text-transform:uppercase;}
 #notam-input:focus{border-color:var(--accent-bd);}
 #notam-input::placeholder{color:var(--w30);font-size:10px;text-transform:none;}
+#notam-loc{flex:1;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);color:#fff;font-family:var(--sans);font-size:11px;padding:6px 10px;outline:none;}
+#notam-loc:focus{border-color:var(--accent-bd);}
+#notam-loc::placeholder{color:var(--w30);font-size:10px;}
 #notam-add{background:var(--accent);border:none;border-radius:var(--r-sm);color:#000;font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer;}
 #notam-add:hover{opacity:.85;}
 #notam-list{display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto;}
@@ -538,10 +541,9 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
       <div class="sec-title">本日作業 · NOTAM</div>
       <div class="notam-input-row">
         <input type="text" id="notam-input" placeholder="編號 U0857" maxlength="20"
-               style="width:90px;flex:none;"
+               style="width:88px;flex:none;"
                onkeydown="if(event.key==='Enter')document.getElementById('notam-loc').focus()">
         <input type="text" id="notam-loc" placeholder="地點，例如 西屯區" maxlength="30"
-               style="flex:1;"
                onkeydown="if(event.key==='Enter')addNotam()">
         <button id="notam-add" onclick="addNotam()">＋</button>
       </div>
