@@ -1163,7 +1163,7 @@ async function fetchAQI(){
   if(!lat || !lng) return;
   try{
     // WAQI 支援 CORS，台灣測站完整
-    const token = 'a0f8eed864ef244f62572c4611beaca3e7ea889c';
+    const token = 'abd37a90fe43b78d4af9dcf8be8817641b983675';
     const url = `https://api.waqi.info/feed/geo:${lat};${lng}/?token=${token}`;
     const res = await fetch(url);
     const json = await res.json();
