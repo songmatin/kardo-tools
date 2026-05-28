@@ -94,25 +94,15 @@ body{font-family:var(--sans);color:#fff;}
    LANDSCAPE — 3-column grid + resizers
 ══════════════════════════════════ */
 @media (orientation:landscape){
-  #app{display:grid;grid-template-columns:280px 16px 1fr 16px 260px;grid-template-rows:100%;height:100%;align-items:stretch;}
-  #col-map{grid-column:1;grid-row:1;display:flex;flex-direction:column;overflow:hidden;height:100%;}
-  #resizer-1{grid-column:2;grid-row:1;display:block;align-self:stretch;height:100%;}
-  #col-mid{grid-column:3;grid-row:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;height:100%;}
+  #app{display:grid;grid-template-columns:280px 5px 1fr 5px 260px;grid-template-rows:100%;}
+  #col-map{grid-column:1;grid-row:1;display:flex;flex-direction:column;overflow:hidden;}
+  #resizer-1{grid-column:2;grid-row:1;}
+  #col-mid{grid-column:3;grid-row:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;}
   #col-mid::-webkit-scrollbar{display:none;}
-  #resizer-2{grid-column:4;grid-row:1;display:block;align-self:stretch;height:100%;}
-  #col-right{grid-column:5;grid-row:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;height:100%;}
+  #resizer-2{grid-column:4;grid-row:1;}
+  #col-right{grid-column:5;grid-row:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;}
   #col-right::-webkit-scrollbar{display:none;}
-  #map{flex:1;min-height:0;height:100%;}
-}
-
-/* 手機橫放（高度小於 500px）— 縮窄側欄，地圖佔更多空間 */
-@media (orientation:landscape) and (max-height:500px){
-  #app{grid-template-columns:220px 16px 1fr 16px 200px;}
-  .resizer{display:block;}
-}
-@media (orientation:landscape) and (max-height:430px){
-  #app{grid-template-columns:180px 16px 1fr 16px 180px;}
-  .resizer{display:block;}
+  #map{flex:1;min-height:0;}
 }
 
 /* ══════════════════════════════════
@@ -351,98 +341,27 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 
 /* RESIZER */
 .resizer{
-  width:16px; flex-shrink:0; cursor:col-resize;
-  background:transparent;
-  position:relative; z-index:1000;
-  touch-action:none;
-  pointer-events:all;
-  display:none;
-  /* 實體 hit area，不依賴 ::after */
-  min-height:100%;
+  width:5px; flex-shrink:0; cursor:col-resize;
+  background:transparent; position:relative; z-index:50;
+  transition:background .15s;
+  display:none; /* hidden in portrait */
 }
 .resizer::after{
-  content:''; position:absolute; top:0; left:50%;
-  transform:translateX(-50%);
-  width:3px; height:100%;
-  background:var(--border); border-radius:2px;
-  transition:background .15s;
-  pointer-events:none;
+  content:''; position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width:1px; height:40px;
+  background:var(--border); border-radius:1px;
+  transition:background .15s, height .15s;
 }
 .resizer:hover::after, .resizer.dragging::after{
-  background:var(--accent);
-  width:4px;
+  background:var(--accent); height:60px;
 }
 @media (orientation:landscape){
   .resizer{ display:block; }
-  /* grid 欄寬也對應更新為 16px */
-  #app{ grid-template-columns:280px 16px 1fr 16px 260px !important; }
-}
-/* ── FONT SCALE ── */
-body{ --fs:1; }
-body.fs-md{ --fs:1.25; }
-body.fs-lg{ --fs:1.55; }
-
-/* Scale all text elements via --fs multiplier */
-body.fs-md .card-val, body.fs-lg .card-val { font-size: calc(22px * var(--fs)); }
-body.fs-md .card-label, body.fs-lg .card-label { font-size: calc(8px * var(--fs)); }
-body.fs-md .sec-title, body.fs-lg .sec-title { font-size: calc(8px * var(--fs)); }
-body.fs-md .sec, body.fs-lg .sec { font-size: calc(10px * var(--fs)); }
-body.fs-md #clock, body.fs-lg #clock { font-size: calc(19px * var(--fs)); }
-body.fs-md, body.fs-lg { font-size: calc(10px * var(--fs)); }
-body.fs-md .layer-row, body.fs-lg .layer-row { font-size: calc(10px * var(--fs)); }
-body.fs-md .n-code, body.fs-lg .n-code { font-size: calc(11px * var(--fs)); }
-body.fs-md .notam-item, body.fs-lg .notam-item { font-size: calc(10px * var(--fs)); }
-body.fs-md #wx-hourly .wx-hour-temp, body.fs-lg #wx-hourly .wx-hour-temp { font-size: calc(12px * var(--fs)); }
-body.fs-md #wx-hourly .wx-hour-icon, body.fs-lg #wx-hourly .wx-hour-icon { font-size: calc(18px * var(--fs)); }
-
-/* ── FORCED ORIENTATION ── */
-@media (orientation:portrait){
-  body.force-landscape #app{ transform:rotate(90deg) translateY(-100%); transform-origin:top left; width:100vh; height:100vw; }
-}
-@media (orientation:landscape){
-  body.force-portrait #app{ transform:rotate(-90deg) translateX(-100%); transform-origin:top left; width:100vh; height:100vw; }
 }
 
-/* ── SETTINGS PANEL ── */
-#settings-btn{
-  background:transparent; border:0.5px solid var(--border); border-radius:8px;
-  color:var(--w55); font-size:14px; padding:4px 8px; cursor:pointer; flex-shrink:0;
-  transition:all .12s; line-height:1;
-}
-#settings-btn:hover{ border-color:var(--accent-bd); color:var(--accent); }
-#settings-panel{
-  position:fixed; top:calc(var(--topbar) + var(--safe-t) + 6px); right:12px;
-  width:260px; background:rgba(22,20,18,0.97); border:0.5px solid rgba(184,150,90,0.35);
-  border-radius:14px; padding:16px; z-index:900;
-  box-shadow:0 12px 40px rgba(0,0,0,0.7);
-  display:none; flex-direction:column; gap:14px;
-  backdrop-filter:blur(20px);
-}
-#settings-panel.open{ display:flex; }
-body.light #settings-panel{ background:rgba(245,242,237,0.97); border-color:rgba(184,150,90,0.4); }
-
-.sp-section{ display:flex; flex-direction:column; gap:7px; }
-.sp-label{
-  font-size:8px; color:var(--accent); letter-spacing:.18em; text-transform:uppercase;
-  display:flex; align-items:center; gap:6px;
-}
-.sp-label::after{ content:''; flex:1; height:0.5px; background:rgba(184,150,90,0.2); }
-.sp-row{ display:grid; gap:4px; }
-.sp-row.col3{ grid-template-columns:1fr 1fr 1fr; }
-.sp-row.col2{ grid-template-columns:1fr 1fr; }
-.sp-btn{
-  background:var(--w06); border:0.5px solid var(--border); border-radius:8px;
-  color:var(--w55); font-size:10px; padding:8px 6px; cursor:pointer; text-align:center;
-  transition:all .12s; font-family:var(--sans); line-height:1.3;
-  display:flex; flex-direction:column; align-items:center; gap:3px;
-}
-.sp-btn:hover{ border-color:var(--accent-bd); color:var(--w85); }
-.sp-btn.active{ background:var(--accent-bg); border-color:var(--accent-bd); color:var(--accent); font-weight:600; }
-.sp-btn .sp-icon{ font-size:16px; line-height:1; }
-body.light .sp-btn{ background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.1); color:rgba(0,0,0,0.55); }
-body.light .sp-btn.active{ background:rgba(184,150,90,0.15); border-color:rgba(184,150,90,0.4); color:var(--accent); }
-body.light .sp-btn:hover{ border-color:var(--accent-bd); color:rgba(0,0,0,0.85); }
-
+/* CREDIT */
+@media (orientation:landscape){ #credit-label{ display:block !important; } }
 
 /* LOADER */
 #loader{position:fixed;inset:0;background:var(--dark);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s;}
@@ -458,7 +377,7 @@ body.light .sp-btn:hover{ border-color:var(--accent-bd); color:rgba(0,0,0,0.85);
 <div id="bg"></div><div id="bgo"></div>
 
 <div id="loader">
-  <div class="ld-brand">里卡豆 · AERIAL DASHBOARD</div>
+  <div class="ld-brand">KARDO AERIAL · DASHBOARD</div>
   <div class="ld-bar"><div class="ld-fill"></div></div>
   <div class="ld-status" id="ld-status">初始化...</div>
 </div>
@@ -481,57 +400,8 @@ body.light .sp-btn:hover{ border-color:var(--accent-bd); color:rgba(0,0,0,0.85);
   <div style="font-size:9px;color:var(--w30);letter-spacing:.08em;white-space:nowrap;flex-shrink:0;">里卡豆 · IG @songmatin</div>
   <div class="tb-sep"></div>
   <div id="gps-pill"><div class="dot" id="gps-dot"></div><span id="gps-txt">定位中</span></div>
-  <button id="settings-btn" onclick="toggleSettings()" title="設定">⚙️</button>
+  <button id="theme-btn" onclick="toggleTheme()" title="切換日/夜模式">☀️</button>
   <div style="font-size:8px;color:var(--w30);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0;display:none;" id="credit-label">AERIAL DASHBOARD · 里卡豆</div>
-</div>
-
-<!-- SETTINGS PANEL -->
-<div id="settings-panel">
-  <!-- 字體大小 -->
-  <div class="sp-section">
-    <div class="sp-label">字體大小</div>
-    <div class="sp-row col3">
-      <button class="sp-btn active" id="fs-sm" onclick="setFontSize('sm')">
-        <span class="sp-icon" style="font-size:12px;">A</span>小
-      </button>
-      <button class="sp-btn" id="fs-md" onclick="setFontSize('md')">
-        <span class="sp-icon" style="font-size:15px;">A</span>中
-      </button>
-      <button class="sp-btn" id="fs-lg" onclick="setFontSize('lg')">
-        <span class="sp-icon" style="font-size:19px;">A</span>大
-      </button>
-    </div>
-  </div>
-  <!-- 顯示方向 -->
-  <div class="sp-section">
-    <div class="sp-label">顯示方向</div>
-    <div class="sp-row col3">
-      <button class="sp-btn" id="orient-port" onclick="setOrientation('portrait')">
-        <span class="sp-icon">📱</span>直向
-      </button>
-      <button class="sp-btn" id="orient-land" onclick="setOrientation('landscape')">
-        <span class="sp-icon">📺</span>橫向
-      </button>
-      <button class="sp-btn active" id="orient-auto" onclick="setOrientation('auto')">
-        <span class="sp-icon">🔄</span>自動
-      </button>
-    </div>
-  </div>
-  <!-- 主題 -->
-  <div class="sp-section">
-    <div class="sp-label">顯示主題</div>
-    <div class="sp-row col3">
-      <button class="sp-btn" id="theme-day" onclick="setTheme('light')">
-        <span class="sp-icon">☀️</span>白天
-      </button>
-      <button class="sp-btn" id="theme-night" onclick="setTheme('dark')">
-        <span class="sp-icon">🌙</span>夜晚
-      </button>
-      <button class="sp-btn active" id="theme-auto" onclick="setTheme('auto')">
-        <span class="sp-icon">✦</span>自動
-      </button>
-    </div>
-  </div>
 </div>
 
 <!-- APP -->
@@ -808,10 +678,8 @@ setInterval(updateClock,1000); updateClock();
 
 // ── ORIENTATION DETECT ──
 function onOrientationChange(){
-  // 多段觸發確保 Leaflet 在 CSS 重排完成後才算尺寸
-  [100, 300, 600].forEach(delay => {
-    setTimeout(()=>{ if(map){ map.invalidateSize({animate:false}); } }, delay);
-  });
+  // Leaflet needs a size refresh when orientation changes
+  setTimeout(()=>{ if(map) map.invalidateSize(); },300);
 }
 window.addEventListener('orientationchange', onOrientationChange);
 window.addEventListener('resize', onOrientationChange);
@@ -1659,185 +1527,127 @@ document.addEventListener('click', e=>{
 });
 
 // ── RESIZER ──
-const _R = {
-  MIN_COL: 160,
-  RESIZER_W: 16,
-  STORAGE_KEY: 'ka_col_widths',
-  rafPending: false
-};
+(function(){
+  const MIN_COL = 160; // minimum column width px
+  const STORAGE_KEY = 'ka_col_widths';
 
-function rIsLandscape(){ return window.innerWidth > window.innerHeight; }
+  function isLandscape(){ return window.innerWidth > window.innerHeight; }
 
-function rGetApp(){ return document.getElementById('app'); }
+  function getApp(){ return document.getElementById('app'); }
 
-function rGetCols(){
-  const app = rGetApp();
-  if(!app) return null;
-  const cols = getComputedStyle(app).gridTemplateColumns.split(' ');
-  const vals = [parseFloat(cols[0]), parseFloat(cols[2]), parseFloat(cols[4])];
-  if(vals.some(isNaN)){ console.warn('[Resizer] getCols got NaN:', cols); return null; }
-  return vals;
-}
+  // Parse current grid cols → [w1, w2, w3] in px
+  function getCols(){
+    const cols = getComputedStyle(getApp()).gridTemplateColumns.split(' ');
+    // cols = [w1, '5px', w2, '5px', w3]
+    return [parseFloat(cols[0]), parseFloat(cols[2]), parseFloat(cols[4])];
+  }
 
-function rSetCols(w1, w2, w3){
-  const app = rGetApp();
-  if(!app) return;
-  app.style.gridTemplateColumns = `${w1}px ${_R.RESIZER_W}px ${w2}px ${_R.RESIZER_W}px ${w3}px`;
-  localStorage.setItem(_R.STORAGE_KEY, JSON.stringify([w1, w2, w3]));
-  if(!_R.rafPending){
-    _R.rafPending = true;
-    requestAnimationFrame(()=>{
-      if(typeof map !== 'undefined' && map) map.invalidateSize({animate:false});
-      _R.rafPending = false;
+  function setCols(w1, w2, w3){
+    getApp().style.gridTemplateColumns = `${w1}px 5px ${w2}px 5px ${w3}px`;
+    // notify map to resize
+    if(typeof map !== 'undefined' && map) map.invalidateSize();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([w1, w2, w3]));
+  }
+
+  // Restore saved widths on load
+  function restoreWidths(){
+    if(!isLandscape()) return;
+    try{
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if(saved && saved.length === 3){
+        const total = window.innerWidth - 10; // 2 resizers × 5px
+        // scale to current viewport if window size changed
+        const savedTotal = saved[0] + saved[1] + saved[2];
+        const scale = total / savedTotal;
+        setCols(
+          Math.max(MIN_COL, Math.round(saved[0] * scale)),
+          Math.max(MIN_COL, Math.round(saved[1] * scale)),
+          Math.max(MIN_COL, Math.round(saved[2] * scale))
+        );
+      }
+    }catch(e){}
+  }
+
+  function initResizer(resizerId, colIndex){
+    const el = document.getElementById(resizerId);
+    if(!el) return;
+
+    let startX, startCols;
+
+    function onStart(clientX){
+      if(!isLandscape()) return;
+      startX = clientX;
+      startCols = getCols();
+      el.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    function onMove(clientX){
+      if(startX === undefined) return;
+      const dx = clientX - startX;
+      let [w1, w2, w3] = startCols;
+      const total = w1 + w2 + w3;
+
+      if(colIndex === 0){
+        // resizer-1: between col1 and col2
+        w1 = Math.max(MIN_COL, Math.min(total - MIN_COL*2, w1 + dx));
+        w2 = Math.max(MIN_COL, total - w1 - w3);
+      } else {
+        // resizer-2: between col2 and col3
+        w3 = Math.max(MIN_COL, Math.min(total - MIN_COL*2, w3 - dx));
+        w2 = Math.max(MIN_COL, total - w1 - w3);
+      }
+      setCols(w1, w2, w3);
+    }
+
+    function onEnd(){
+      startX = undefined;
+      el.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    // Mouse
+    el.addEventListener('mousedown', e=>{ e.preventDefault(); onStart(e.clientX); });
+    document.addEventListener('mousemove', e=>{ if(startX!==undefined) onMove(e.clientX); });
+    document.addEventListener('mouseup', onEnd);
+
+    // Touch
+    el.addEventListener('touchstart', e=>{ e.preventDefault(); onStart(e.touches[0].clientX); }, {passive:false});
+    document.addEventListener('touchmove', e=>{ if(startX!==undefined){ e.preventDefault(); onMove(e.touches[0].clientX); } }, {passive:false});
+    document.addEventListener('touchend', onEnd);
+  }
+
+  // Double-click resizer → reset to default
+  function initDoubleClick(resizerId){
+    document.getElementById(resizerId)?.addEventListener('dblclick', ()=>{
+      localStorage.removeItem(STORAGE_KEY);
+      getApp().style.gridTemplateColumns = '';
+      setTimeout(()=>{ if(typeof map!=='undefined'&&map) map.invalidateSize(); }, 100);
     });
   }
-}
 
-function rRestoreWidths(){
-  if(!rIsLandscape()) return;
-  try{
-    const saved = JSON.parse(localStorage.getItem(_R.STORAGE_KEY));
-    if(saved && saved.length === 3){
-      const total = window.innerWidth - _R.RESIZER_W * 2;
-      const savedTotal = saved[0] + saved[1] + saved[2];
-      const scale = total / savedTotal;
-      rSetCols(
-        Math.max(_R.MIN_COL, Math.round(saved[0] * scale)),
-        Math.max(_R.MIN_COL, Math.round(saved[1] * scale)),
-        Math.max(_R.MIN_COL, Math.round(saved[2] * scale))
-      );
-    }
-  }catch(e){ console.warn('[Resizer] restoreWidths error:', e); }
-}
-
-function initResizer(resizerId, colIndex){
-  const el = document.getElementById(resizerId);
-  if(!el){ console.error('[Resizer] element not found:', resizerId); return; }
-  console.log('[Resizer] binding', resizerId, 'colIndex', colIndex);
-
-  let startX, startCols;
-
-  function onStart(clientX, pointerId){
-    if(!rIsLandscape()){ console.log('[Resizer] skipped — portrait'); return; }
-    const cols = rGetCols();
-    if(!cols){ console.warn('[Resizer] onStart: getCols null'); return; }
-    startX = clientX;
-    startCols = cols;
-    el.classList.add('dragging');
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    document.body.style.webkitUserSelect = 'none';
-    if(pointerId !== undefined){
-      try{ el.setPointerCapture(pointerId); console.log('[Resizer] captured pointer', pointerId); }
-      catch(e){ console.warn('[Resizer] setPointerCapture failed', e); }
-    }
-    console.log('[Resizer] drag start x=', clientX, 'cols=', cols);
-  }
-
-  function onMove(clientX){
-    if(startX === undefined) return;
-    const dx = clientX - startX;
-    let [w1, w2, w3] = startCols;
-    const total = w1 + w2 + w3;
-    if(colIndex === 0){
-      w1 = Math.max(_R.MIN_COL, Math.min(total - _R.MIN_COL*2, w1 + dx));
-      w2 = Math.max(_R.MIN_COL, total - w1 - w3);
-    } else {
-      w3 = Math.max(_R.MIN_COL, Math.min(total - _R.MIN_COL*2, w3 - dx));
-      w2 = Math.max(_R.MIN_COL, total - w1 - w3);
-    }
-    rSetCols(w1, w2, w3);
-  }
-
-  function onEnd(){
-    if(startX === undefined) return;
-    startX = undefined;
-    el.classList.remove('dragging');
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-    document.body.style.webkitUserSelect = '';
-    console.log('[Resizer] drag end');
-  }
-
-  el.addEventListener('pointerdown', e=>{
-    e.preventDefault();
-    e.stopPropagation();
-    onStart(e.clientX, e.pointerId);
+  window.addEventListener('load', ()=>{
+    initResizer('resizer-1', 0);
+    initResizer('resizer-2', 1);
+    initDoubleClick('resizer-1');
+    initDoubleClick('resizer-2');
+    setTimeout(restoreWidths, 200);
   });
-  document.addEventListener('pointermove', e=>{
-    if(startX !== undefined) onMove(e.clientX);
+
+  // Re-apply on orientation change
+  window.addEventListener('resize', ()=>{
+    if(isLandscape()) setTimeout(restoreWidths, 350);
   });
-  document.addEventListener('pointerup', onEnd);
-  document.addEventListener('pointercancel', onEnd);
+})();
 
-  // Double-click → reset
-  el.addEventListener('dblclick', ()=>{
-    localStorage.removeItem(_R.STORAGE_KEY);
-    rGetApp().style.gridTemplateColumns = '';
-    setTimeout(()=>{ if(typeof map!=='undefined'&&map) map.invalidateSize(); }, 150);
-    console.log('[Resizer] reset to default');
-  });
-}
-
-window.addEventListener('resize', ()=>{
-  if(rIsLandscape()) setTimeout(rRestoreWidths, 350);
-});
-
-// ── SETTINGS PANEL ──
-function toggleSettings(){
-  const p = document.getElementById('settings-panel');
-  p.classList.toggle('open');
-}
-// 點外部關閉
-document.addEventListener('click', e=>{
-  const panel = document.getElementById('settings-panel');
-  const btn   = document.getElementById('settings-btn');
-  if(panel?.classList.contains('open')
-    && !panel.contains(e.target)
-    && e.target !== btn
-    && !e.target.closest('.resizer')){
-    panel.classList.remove('open');
-  }
-});
-
-// ── FONT SIZE ──
-function setFontSize(size){
-  document.body.classList.remove('fs-md','fs-lg');
-  if(size === 'md') document.body.classList.add('fs-md');
-  if(size === 'lg') document.body.classList.add('fs-lg');
-  localStorage.setItem('ka_fontsize', size);
-  ['sm','md','lg'].forEach(s =>
-    document.getElementById('fs-'+s)?.classList.toggle('active', s === size)
-  );
-  setTimeout(()=>{ if(map) map.invalidateSize(); }, 100);
-}
-function initFontSize(){
-  const s = localStorage.getItem('ka_fontsize') || 'sm';
-  setFontSize(s);
-}
-
-// ── ORIENTATION ──
-function setOrientation(mode){
-  document.body.classList.remove('force-portrait','force-landscape');
-  if(mode === 'portrait')  document.body.classList.add('force-portrait');
-  if(mode === 'landscape') document.body.classList.add('force-landscape');
-  localStorage.setItem('ka_orient', mode);
-  ['portrait','landscape','auto'].forEach(m =>
-    document.getElementById('orient-' + (m==='portrait'?'port':m==='landscape'?'land':'auto'))
-      ?.classList.toggle('active', m === mode)
-  );
-  setTimeout(()=>{ if(map) map.invalidateSize({animate:false}); }, 200);
-}
-function initOrientation(){
-  const m = localStorage.getItem('ka_orient') || 'auto';
-  setOrientation(m);
-}
-
-// ── THEME ──
-let themeAutoTimer = null;
-
-function applyTheme(isLight){
-  document.body.classList.toggle('light', isLight);
+// ── THEME TOGGLE ──
+function toggleTheme(){
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('theme-btn').textContent = isLight ? '🌙' : '☀️';
+  localStorage.setItem('ka_theme', isLight ? 'light' : 'dark');
+  // 切換地圖底圖
   if(map){
     map.eachLayer(l=>{ if(l._url) map.removeLayer(l); });
     const tileUrl = isLight
@@ -1847,35 +1657,12 @@ function applyTheme(isLight){
   }
 }
 
-function setTheme(mode){
-  localStorage.setItem('ka_theme', mode);
-  ['light','dark','auto'].forEach(m =>
-    document.getElementById('theme-' + (m==='light'?'day':m==='dark'?'night':'auto'))
-      ?.classList.toggle('active', m === mode)
-  );
-  if(themeAutoTimer){ clearInterval(themeAutoTimer); themeAutoTimer = null; }
-
-  if(mode === 'auto'){
-    const checkAuto = ()=>{
-      const h = new Date().getHours();
-      applyTheme(h >= 6 && h < 19); // 6:00–19:00 白天
-    };
-    checkAuto();
-    themeAutoTimer = setInterval(checkAuto, 60 * 1000);
-  } else {
-    applyTheme(mode === 'light');
-  }
-}
-
 function initTheme(){
-  const saved = localStorage.getItem('ka_theme') || 'auto';
-  setTheme(saved);
-}
-
-// 舊的 toggleTheme 保留相容
-function toggleTheme(){
-  const isLight = document.body.classList.contains('light');
-  setTheme(isLight ? 'dark' : 'light');
+  const saved = localStorage.getItem('ka_theme');
+  if(saved === 'light'){
+    document.body.classList.add('light');
+    document.getElementById('theme-btn').textContent = '🌙';
+  }
 }
 
 
@@ -1883,21 +1670,11 @@ function toggleTheme(){
 window.addEventListener('load',()=>{
   ldStatus('初始化地圖...');
   initTheme();
-  initFontSize();
-  initOrientation();
   initMap();
   buildAirportTabs();
   renderNotams();
   ldStatus('取得定位...');
-  setTimeout(locate, 300);
-  // Resizer — 在所有佈局完成後初始化
-  setTimeout(()=>{
-    console.log('[Resizer] init start');
-    initResizer('resizer-1', 0);
-    initResizer('resizer-2', 1);
-    rRestoreWidths();
-    console.log('[Resizer] init done');
-  }, 500);
+  setTimeout(locate,300);
 });
 </script>
 </body>
