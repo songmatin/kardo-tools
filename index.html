@@ -269,14 +269,14 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 .ap-info-val{font-family:var(--mono);color:var(--orange);font-size:11px;font-weight:700;}
 
 /* NOTAM */
-.notam-input-row{display:flex;gap:5px;margin-bottom:7px;}
-#notam-input{flex:1;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);color:#fff;font-family:var(--mono);font-size:11px;padding:6px 10px;letter-spacing:.07em;outline:none;text-transform:uppercase;}
+.notam-input-row{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:4px;margin-bottom:7px;}
+#notam-input{grid-column:1;grid-row:1;width:100%;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);color:#fff;font-family:var(--mono);font-size:11px;padding:6px 10px;letter-spacing:.07em;outline:none;text-transform:uppercase;box-sizing:border-box;}
 #notam-input:focus{border-color:var(--accent-bd);}
 #notam-input::placeholder{color:var(--w30);font-size:10px;text-transform:none;}
-#notam-loc{flex:1;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);color:#fff;font-family:var(--sans);font-size:11px;padding:6px 10px;outline:none;}
+#notam-loc{grid-column:1;grid-row:2;width:100%;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);color:#fff;font-family:var(--sans);font-size:11px;padding:6px 10px;outline:none;box-sizing:border-box;}
 #notam-loc:focus{border-color:var(--accent-bd);}
 #notam-loc::placeholder{color:var(--w30);font-size:10px;}
-#notam-add{background:var(--accent);border:none;border-radius:var(--r-sm);color:#000;font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer;}
+#notam-add{grid-column:2;grid-row:1/3;align-self:stretch;background:var(--accent);border:none;border-radius:var(--r-sm);color:#000;font-size:16px;font-weight:700;padding:0 12px;cursor:pointer;white-space:nowrap;}
 #notam-add:hover{opacity:.85;}
 #notam-list{display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto;}
 .notam-item{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);padding:6px 10px;display:flex;align-items:center;gap:7px;}
@@ -549,7 +549,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
       <div class="sec-title">本日作業 · NOTAM</div>
       <div class="notam-input-row">
         <input type="text" id="notam-input" placeholder="編號 U0857" maxlength="20"
-               style="width:88px;flex:none;"
                onkeydown="if(event.key==='Enter')document.getElementById('notam-loc').focus()">
         <input type="text" id="notam-loc" placeholder="地點，例如 西屯區" maxlength="30"
                onkeydown="if(event.key==='Enter')addNotam()">
