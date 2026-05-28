@@ -1161,7 +1161,7 @@ const AQI_COLORS = {
 async function fetchAQI(){
   if(!lat || !lng) return;
   try{
-    const url = 'https://data.moenv.gov.tw/api/v1/aqx_p_432?api_key=e8dd42e6-9b8b-43f8-991e-b3dee723a52f&format=JSON&limit=200';
+    const url = 'https://data.epa.gov.tw/api/v2/aqx_p_432?api_key=e8dd42e6-9b8b-43f8-991e-b3dee723a52d&limit=1000&sort=ImportDate%20desc&format=JSON';
     const res = await fetch(url);
     const json = await res.json();
     const records = json?.records;
@@ -1177,20 +1177,19 @@ async function fetchAQI(){
     });
     if(!best) throw new Error('no nearest station');
 
-    const aqi    = parseInt(best.aqi) || 0;
-    const status = best.status || '未知';
-    const pm25   = best['pm2.5'] || '--';
-    const pm10   = best.pm10    || '--';
-    const o3     = best.o3      || '--';
-    const stn    = best.sitename || '--';
+    const aqi    = parseInt(best.aqi)    || 0;
+    const status = best.status           || '未知';
+    const pm25   = best['pm2.5']         || '--';
+    const pm10   = best.pm10             || '--';
+    const o3     = best.o3               || '--';
+    const stn    = best.sitename         || '--';
 
     const col = AQI_COLORS[status] || { bg:'var(--w10)', text:'var(--w85)' };
 
-    // Badge
     const badge = document.getElementById('aqi-badge');
-    badge.textContent = aqi;
+    badge.textContent     = aqi;
     badge.style.background = col.bg;
-    badge.style.color = col.text;
+    badge.style.color      = col.text;
 
     document.getElementById('aqi-status').textContent  = status;
     document.getElementById('aqi-status').style.color  = col.bg;
@@ -1199,14 +1198,13 @@ async function fetchAQI(){
     document.getElementById('aqi-pm10').innerHTML = `${pm10}<span class="card-unit">μg</span>`;
     document.getElementById('aqi-o3').innerHTML   = `${o3}<span class="card-unit">ppb</span>`;
 
-    // Color pm25 by level
     const pm25v = parseFloat(pm25);
     document.getElementById('aqi-pm25').style.color =
       pm25v < 15 ? 'var(--green)' : pm25v < 35 ? 'var(--orange)' : 'var(--red)';
 
   } catch(e){
     console.warn('AQI fetch error:', e.message);
-    document.getElementById('aqi-status').textContent = '資料載入失敗';
+    document.getElementById('aqi-status').textContent  = '資料載入失敗';
     document.getElementById('aqi-station').textContent = '請稍後再試';
   }
 }
