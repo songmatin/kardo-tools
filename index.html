@@ -1162,29 +1162,19 @@ const AQI_COLORS = {
 async function fetchAQI(){
   if(!lat || !lng) return;
   try{
-    const key = 'c29131c1-b41d-46ed-915c-2f9c2b6271d8';
-    const url = `https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=${key}&limit=1000&format=JSON`;
+    // WAQI 支援 CORS，台灣測站完整
+    const token = 'a0f8eed864ef244f62572c4611beaca3e7ea889c';
+    const url = `https://api.waqi.info/feed/geo:${lat};${lng}/?token=${token}`;
     const res = await fetch(url);
     const json = await res.json();
-    const records = json?.records;
-    if(!records || !records.length) throw new Error('no records');
+    if(json.status !== 'ok') throw new Error(json.data||'WAQI error');
 
-    let best = null, minD = Infinity;
-    records.forEach(r => {
-      const rlat = parseFloat(r.latitude), rlng = parseFloat(r.longitude);
-      if(isNaN(rlat)||isNaN(rlng)) return;
-      const aqiVal = parseFloat(r.aqi);
-      if(isNaN(aqiVal)) return;
-      const d = Math.hypot(rlat-lat, rlng-lng);
-      if(d<minD){ minD=d; best=r; }
-    });
-    if(!best) throw new Error('找不到附近測站');
-
-    const aqi  = parseInt(best.aqi) || 0;
-    const stn  = best.sitename || '--';
-    const pm25 = best['pm2.5'] ?? '--';
-    const pm10 = best.pm10    ?? '--';
-    const o3   = best.o3      ?? '--';
+    const d    = json.data;
+    const aqi  = d.aqi || 0;
+    const stn  = d.city?.name || '--';
+    const pm25 = d.iaqi?.pm25?.v ?? '--';
+    const pm10 = d.iaqi?.pm10?.v ?? '--';
+    const o3   = d.iaqi?.o3?.v   ?? '--';
 
     let status, col;
     if     (aqi<=50)  {status='良好';             col={bg:'#32d264',text:'#000'};}
