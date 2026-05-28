@@ -909,8 +909,9 @@ async function fetchWeather(){
     updateBeaufort(ws10);
     renderWindAlt(ws10);
     updateAssessment(ws10,wg,c.visibility,c.cloud_cover);
-    fetchTides();
-    fetchAQI();
+    // 獨立執行，不讓任一失敗中斷其他
+    fetchTides().catch(e=>console.warn('Tide error:',e));
+    fetchAQI().catch(e=>console.warn('AQI error:',e));
     ldStatus('完成');
   }catch(e){ldStatus('天氣載入失敗');}
 }
@@ -1231,9 +1232,11 @@ async function fetchAQI(){
     const url = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
     const res = await fetch(url);
     const json = await res.json();
-    // Worker 直接回傳陣列，或包在 records 裡
     const records = Array.isArray(json) ? json : json?.records;
     if(!records || !records.length) throw new Error('no records');
+
+    // 依發布時間排序，確保抓最新資料
+    records.sort((a,b) => new Date(b.publishtime) - new Date(a.publishtime));
 
     let best = null, minD = Infinity;
     records.forEach(r => {
