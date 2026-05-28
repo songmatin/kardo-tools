@@ -551,6 +551,25 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
     </div>
 
     <div class="sec">
+      <div class="sec-title">Radar · 雷達回波</div>
+      <div style="background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);overflow:hidden;">
+        <div style="position:relative;width:100%;aspect-ratio:1.55/1;background:#0a0f14;overflow:hidden;">
+          <img id="radar-img" src="" alt="雷達回波"
+            style="width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .5s;">
+          <div id="radar-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--w30);letter-spacing:.08em;">載入中…</div>
+          <div id="radar-ts" style="position:absolute;bottom:5px;right:7px;font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.5);"></div>
+          <div style="position:absolute;top:5px;left:7px;font-size:8px;color:rgba(96,212,240,0.7);letter-spacing:.06em;">中央氣象署整合回波</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;border-top:0.5px solid var(--border);">
+          <div style="font-size:9px;color:var(--w30);">每 10 分鐘自動更新</div>
+          <button onclick="refreshRadarPanel()" style="background:transparent;border:0.5px solid var(--border);border-radius:5px;color:var(--w55);font-size:11px;padding:2px 8px;cursor:pointer;transition:all .12s;"
+            onmouseover="this.style.borderColor='var(--accent-bd)';this.style.color='var(--accent)'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--w55)'">↻</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
       <div class="sec-title">Weather · 天氣</div>
       <div class="card-grid" id="wx-grid">
         <div class="card"><div class="card-label">溫度</div><div class="card-val" id="wx-temp" style="color:var(--blue);">--<span class="card-unit">°C</span></div></div>
@@ -668,6 +687,7 @@ function initMap(){
     temporary:     L.layerGroup().addTo(map),
   };
   loadNFZ();
+  initRadar();
 
   // Airport markers
   AIRPORTS.forEach(ap=>{
@@ -787,6 +807,41 @@ function loadNFZ(){
 
 // 台灣全島範圍 bounds（雷達圖對應的經緯度範圍）
 // 按 Shift+R 可打開即時校準工具
+// ── RADAR（只顯示預覽圖，不疊加地圖）──
+let radarTimer = null;
+
+function initRadar(){
+  loadRadar();
+  radarTimer = setInterval(loadRadar, 10 * 60 * 1000);
+}
+
+function loadRadar(){
+  const WORKER = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
+  const url = `${WORKER}?type=radar&_t=${Date.now()}`;
+  const img = document.getElementById('radar-img');
+  const loading = document.getElementById('radar-loading');
+  const ts = document.getElementById('radar-ts');
+  if(!img) return;
+  const tmp = new Image();
+  tmp.onload = ()=>{
+    img.src = tmp.src;
+    img.style.opacity = '1';
+    if(loading) loading.style.display = 'none';
+    const now = new Date();
+    if(ts) ts.textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 更新`;
+  };
+  tmp.onerror = ()=>{ if(loading){ loading.style.display='flex'; loading.textContent='載入失敗'; } };
+  tmp.src = url;
+}
+
+function refreshRadarPanel(){
+  const img = document.getElementById('radar-img');
+  const loading = document.getElementById('radar-loading');
+  if(img) img.style.opacity = '0';
+  if(loading){ loading.style.display='flex'; loading.textContent='載入中…'; }
+  loadRadar();
+}
+
 function toggleLayer(name, el){
   el.classList.toggle('on');
   const on = el.classList.contains('on');
