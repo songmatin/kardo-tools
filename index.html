@@ -1159,63 +1159,58 @@ const AQI_COLORS = {
   '有害':    { bg:'#7f1d1d', text:'#fff' },
 };
 
-async function fetchAQI(){
-  if(!lat || !lng) return;
-
+async function fetchAQI() {
+  if (!lat || !lng) return;
   const CACHE_KEY = 'ka_aqi_cache';
-  const CACHE_TTL = 30 * 60 * 1000; // 30 分鐘
-
+  const CACHE_TTL = 30 * 60 * 1000;
   let data = null, stn = '--';
 
-  // 嘗試使用快取
-  try{
+  try {
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
-    if(cached && (Date.now() - cached.ts) < CACHE_TTL){
+    if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
       data = cached.data;
-      stn  = cached.stn;
+      stn = cached.stn;
     }
-  } catch(e){}
+  } catch(e) {}
 
-  // 快取不存在或過期，重新抓取
-  if(!data){
-    try{
+  if (!data) {
+    try {
       const key = 'c29131c1-b41d-46ed-915c-2f9c2b6271d8';
       const url = `https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=${key}&limit=1000&format=JSON`;
       const res = await fetch(url);
       const json = await res.json();
       const records = json?.records;
-      if(!records || !records.length) throw new Error('no records');
+      if (!records || !records.length) throw new Error('no records');
 
       let best = null, minD = Infinity;
       records.forEach(r => {
         const rlat = parseFloat(r.latitude), rlng = parseFloat(r.longitude);
-        if(isNaN(rlat)||isNaN(rlng)) return;
-        if(r.aqi === null || r.aqi === undefined || r.aqi === '' || r.aqi === '-' || r.aqi === 'N/A') return;
-        const d = Math.hypot(rlat-lat, rlng-lng);
-        if(d<minD){ minD=d; best=r; }
+        if (isNaN(rlat) || isNaN(rlng)) return;
+        const aqiVal = parseFloat(r.aqi);
+        if (isNaN(aqiVal)) return;
+        const d = Math.hypot(rlat - lat, rlng - lng);
+        if (d < minD) { minD = d; best = r; }
       });
-      if(!best) throw new Error('no valid station');
+      if (!best) throw new Error('找不到附近測站');
 
-      const safeVal = v => (v!==undefined&&v!==null&&v!=='') ? v : '--';
+      const getVal = (k) => best[k] ?? best[k.toLowerCase()] ?? best[k.toUpperCase()] ?? '--';
       data = {
-        aqi:  parseInt(best.aqi)||0,
-        pm25: safeVal(best['pm2.5']??best.pm25),
-        pm10: safeVal(best.pm10),
-        o3:   safeVal(best.o3),
+        aqi:  parseInt(best.aqi) || 0,
+        pm25: getVal('pm2.5'),
+        pm10: getVal('pm10'),
+        o3:   getVal('o3'),
       };
-      stn = best.sitename||'--';
+      stn = best.sitename || '--';
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ts: Date.now(), data, stn}));
 
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ts:Date.now(), data, stn}));
-
-    } catch(e){
-      console.warn('AQI error:', e.message);
-      document.getElementById('aqi-status').textContent  = '資料載入失敗';
+    } catch(e) {
+      console.error('AQI fetch error:', e);
+      document.getElementById('aqi-status').textContent  = '載入失敗';
       document.getElementById('aqi-station').textContent = e.message;
       return;
     }
   }
 
-  // 渲染
   const {aqi, pm25, pm10, o3} = data;
   let status, col;
   if     (aqi<=50)  {status='良好';             col={bg:'#32d264',text:'#000'};}
