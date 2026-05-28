@@ -1656,6 +1656,8 @@ document.addEventListener('click', e=>{
   const MIN_COL = 160; // minimum column width px
   const STORAGE_KEY = 'ka_col_widths';
 
+  const RESIZER_W = 16; // px，需與 CSS .resizer width 一致
+
   function isLandscape(){ return window.innerWidth > window.innerHeight; }
 
   function getApp(){ return document.getElementById('app'); }
@@ -1663,13 +1665,12 @@ document.addEventListener('click', e=>{
   // Parse current grid cols → [w1, w2, w3] in px
   function getCols(){
     const cols = getComputedStyle(getApp()).gridTemplateColumns.split(' ');
-    // cols = [w1, '5px', w2, '5px', w3]
+    // cols = [w1, '16px', w2, '16px', w3]
     return [parseFloat(cols[0]), parseFloat(cols[2]), parseFloat(cols[4])];
   }
 
   function setCols(w1, w2, w3){
-    getApp().style.gridTemplateColumns = `${w1}px 5px ${w2}px 5px ${w3}px`;
-    // notify map to resize
+    getApp().style.gridTemplateColumns = `${w1}px ${RESIZER_W}px ${w2}px ${RESIZER_W}px ${w3}px`;
     if(typeof map !== 'undefined' && map) map.invalidateSize();
     localStorage.setItem(STORAGE_KEY, JSON.stringify([w1, w2, w3]));
   }
@@ -1680,8 +1681,7 @@ document.addEventListener('click', e=>{
     try{
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if(saved && saved.length === 3){
-        const total = window.innerWidth - 32; // 2 resizers × 16px
-        // scale to current viewport if window size changed
+        const total = window.innerWidth - RESIZER_W * 2;
         const savedTotal = saved[0] + saved[1] + saved[2];
         const scale = total / savedTotal;
         setCols(
@@ -1776,7 +1776,10 @@ function toggleSettings(){
 document.addEventListener('click', e=>{
   const panel = document.getElementById('settings-panel');
   const btn   = document.getElementById('settings-btn');
-  if(panel.classList.contains('open') && !panel.contains(e.target) && e.target !== btn){
+  if(panel?.classList.contains('open')
+    && !panel.contains(e.target)
+    && e.target !== btn
+    && !e.target.closest('.resizer')){
     panel.classList.remove('open');
   }
 });
