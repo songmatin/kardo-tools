@@ -1190,7 +1190,7 @@ async function fetchAQI(){
       records.forEach(r => {
         const rlat = parseFloat(r.latitude), rlng = parseFloat(r.longitude);
         if(isNaN(rlat)||isNaN(rlng)) return;
-        if(!r.aqi || r.aqi===''||r.aqi==='-') return;
+        if(r.aqi === null || r.aqi === undefined || r.aqi === '' || r.aqi === '-' || r.aqi === 'N/A') return;
         const d = Math.hypot(rlat-lat, rlng-lng);
         if(d<minD){ minD=d; best=r; }
       });
