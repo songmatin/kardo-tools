@@ -1162,33 +1162,31 @@ const AQI_COLORS = {
 async function fetchAQI(){
   if(!lat || !lng) return;
   try{
-    const url = 'https://data.epa.gov.tw/api/v2/aqx_p_432?api_key=e8dd42e6-9b8b-43f8-991e-b3dee723a52d&limit=1000&sort=ImportDate%20desc&format=JSON';
+    // WAQI：支援台灣所有測站，直接用 GPS 座標查詢最近站
+    const token = 'a0f8eed864ef244f62572c4611beaca3e7ea889c';
+    const url = `https://api.waqi.info/feed/geo:${lat};${lng}/?token=${token}`;
     const res = await fetch(url);
     const json = await res.json();
-    const records = json?.records;
-    if(!records || !records.length) throw new Error('no AQI records');
+    if(json.status !== 'ok') throw new Error(json.data || 'WAQI error');
 
-    // Find nearest station by GPS
-    let best = null, minD = Infinity;
-    records.forEach(r => {
-      const rlat = parseFloat(r.latitude), rlng = parseFloat(r.longitude);
-      if(isNaN(rlat) || isNaN(rlng)) return;
-      const d = Math.hypot(rlat - lat, rlng - lng);
-      if(d < minD){ minD = d; best = r; }
-    });
-    if(!best) throw new Error('no nearest station');
+    const d      = json.data;
+    const aqi    = d.aqi;
+    const stn    = d.city?.name || '--';
+    const pm25   = d.iaqi?.pm25?.v ?? '--';
+    const pm10   = d.iaqi?.pm10?.v ?? '--';
+    const o3     = d.iaqi?.o3?.v   ?? '--';
 
-    const aqi    = parseInt(best.aqi)    || 0;
-    const status = best.status           || '未知';
-    const pm25   = best['pm2.5']         || '--';
-    const pm10   = best.pm10             || '--';
-    const o3     = best.o3               || '--';
-    const stn    = best.sitename         || '--';
-
-    const col = AQI_COLORS[status] || { bg:'var(--w10)', text:'var(--w85)' };
+    // AQI 等級判斷
+    let status, col;
+    if     (aqi <= 50)  { status='良好';              col={bg:'#32d264',text:'#000'}; }
+    else if(aqi <= 100) { status='普通';              col={bg:'#ffd60a',text:'#000'}; }
+    else if(aqi <= 150) { status='對敏感族群不健康';  col={bg:'#ff9f0a',text:'#000'}; }
+    else if(aqi <= 200) { status='不健康';            col={bg:'#ff4f41',text:'#fff'}; }
+    else if(aqi <= 300) { status='非常不健康';        col={bg:'#c084fc',text:'#fff'}; }
+    else                { status='有害';              col={bg:'#7f1d1d',text:'#fff'}; }
 
     const badge = document.getElementById('aqi-badge');
-    badge.textContent     = aqi;
+    badge.textContent      = aqi;
     badge.style.background = col.bg;
     badge.style.color      = col.text;
 
