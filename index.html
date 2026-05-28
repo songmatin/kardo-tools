@@ -1653,137 +1653,129 @@ document.addEventListener('click', e=>{
 });
 
 // ── RESIZER ──
-(function(){
-  const MIN_COL = 160; // minimum column width px
-  const STORAGE_KEY = 'ka_col_widths';
+const _R = {
+  MIN_COL: 160,
+  RESIZER_W: 16,
+  STORAGE_KEY: 'ka_col_widths',
+  rafPending: false
+};
 
-  const RESIZER_W = 16; // px，需與 CSS .resizer width 一致
+function rIsLandscape(){ return window.innerWidth > window.innerHeight; }
 
-  function isLandscape(){ return window.innerWidth > window.innerHeight; }
+function rGetApp(){ return document.getElementById('app'); }
 
-  function getApp(){ return document.getElementById('app'); }
+function rGetCols(){
+  const app = rGetApp();
+  if(!app) return null;
+  const cols = getComputedStyle(app).gridTemplateColumns.split(' ');
+  const vals = [parseFloat(cols[0]), parseFloat(cols[2]), parseFloat(cols[4])];
+  if(vals.some(isNaN)){ console.warn('[Resizer] getCols got NaN:', cols); return null; }
+  return vals;
+}
 
-  let rafPending = false;
-  function setCols(w1, w2, w3){
-    getApp().style.gridTemplateColumns = `${w1}px ${RESIZER_W}px ${w2}px ${RESIZER_W}px ${w3}px`;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([w1, w2, w3]));
-    // throttle invalidateSize via rAF — prevents main-thread blocking during drag
-    if(!rafPending){
-      rafPending = true;
-      requestAnimationFrame(()=>{
-        if(typeof map !== 'undefined' && map) map.invalidateSize({animate:false});
-        rafPending = false;
-      });
-    }
-  }
-
-  // Parse current grid cols → [w1, w2, w3] in px
-  // Returns null if values are NaN (e.g. CSS uses 1fr — not yet resolved)
-  function getCols(){
-    const cols = getComputedStyle(getApp()).gridTemplateColumns.split(' ');
-    const vals = [parseFloat(cols[0]), parseFloat(cols[2]), parseFloat(cols[4])];
-    if(vals.some(isNaN)) return null;
-    return vals;
-  }
-
-  // Restore saved widths on load
-  function restoreWidths(){
-    if(!isLandscape()) return;
-    try{
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if(saved && saved.length === 3){
-        const total = window.innerWidth - RESIZER_W * 2;
-        const savedTotal = saved[0] + saved[1] + saved[2];
-        const scale = total / savedTotal;
-        setCols(
-          Math.max(MIN_COL, Math.round(saved[0] * scale)),
-          Math.max(MIN_COL, Math.round(saved[1] * scale)),
-          Math.max(MIN_COL, Math.round(saved[2] * scale))
-        );
-      }
-    }catch(e){}
-  }
-
-  function initResizer(resizerId, colIndex){
-    const el = document.getElementById(resizerId);
-    if(!el) return;
-
-    let startX, startCols;
-
-    function onStart(clientX, pointerId){
-      if(!isLandscape()) return;
-      const cols = getCols();
-      if(!cols) return; // NaN guard — layout not resolved yet
-      startX = clientX;
-      startCols = cols;
-      el.classList.add('dragging');
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-      // Pointer capture keeps events coming even if cursor leaves element
-      if(pointerId !== undefined){
-        try{ el.setPointerCapture(pointerId); }catch(e){}
-      }
-    }
-
-    function onMove(clientX){
-      if(startX === undefined) return;
-      const dx = clientX - startX;
-      let [w1, w2, w3] = startCols;
-      const total = w1 + w2 + w3;
-
-      if(colIndex === 0){
-        // resizer-1: between col1 and col2
-        w1 = Math.max(MIN_COL, Math.min(total - MIN_COL*2, w1 + dx));
-        w2 = Math.max(MIN_COL, total - w1 - w3);
-      } else {
-        // resizer-2: between col2 and col3
-        w3 = Math.max(MIN_COL, Math.min(total - MIN_COL*2, w3 - dx));
-        w2 = Math.max(MIN_COL, total - w1 - w3);
-      }
-      setCols(w1, w2, w3);
-    }
-
-    function onEnd(){
-      startX = undefined;
-      el.classList.remove('dragging');
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    }
-
-    // Unified Pointer Events (covers mouse + touch + stylus)
-    el.addEventListener('pointerdown', e=>{
-      e.preventDefault();
-      onStart(e.clientX, e.pointerId);
-    });
-    document.addEventListener('pointermove', e=>{
-      if(startX !== undefined) onMove(e.clientX);
-    });
-    document.addEventListener('pointerup', onEnd);
-    document.addEventListener('pointercancel', onEnd);
-  }
-
-  // Double-click resizer → reset to default
-  function initDoubleClick(resizerId){
-    document.getElementById(resizerId)?.addEventListener('dblclick', ()=>{
-      localStorage.removeItem(STORAGE_KEY);
-      getApp().style.gridTemplateColumns = '';
-      setTimeout(()=>{ if(typeof map!=='undefined'&&map) map.invalidateSize(); }, 100);
+function rSetCols(w1, w2, w3){
+  const app = rGetApp();
+  if(!app) return;
+  app.style.gridTemplateColumns = `${w1}px ${_R.RESIZER_W}px ${w2}px ${_R.RESIZER_W}px ${w3}px`;
+  localStorage.setItem(_R.STORAGE_KEY, JSON.stringify([w1, w2, w3]));
+  if(!_R.rafPending){
+    _R.rafPending = true;
+    requestAnimationFrame(()=>{
+      if(typeof map !== 'undefined' && map) map.invalidateSize({animate:false});
+      _R.rafPending = false;
     });
   }
+}
 
-  window.addEventListener('load', ()=>{
-    initResizer('resizer-1', 0);
-    initResizer('resizer-2', 1);
-    initDoubleClick('resizer-1');
-    initDoubleClick('resizer-2');
-    setTimeout(restoreWidths, 200);
+function rRestoreWidths(){
+  if(!rIsLandscape()) return;
+  try{
+    const saved = JSON.parse(localStorage.getItem(_R.STORAGE_KEY));
+    if(saved && saved.length === 3){
+      const total = window.innerWidth - _R.RESIZER_W * 2;
+      const savedTotal = saved[0] + saved[1] + saved[2];
+      const scale = total / savedTotal;
+      rSetCols(
+        Math.max(_R.MIN_COL, Math.round(saved[0] * scale)),
+        Math.max(_R.MIN_COL, Math.round(saved[1] * scale)),
+        Math.max(_R.MIN_COL, Math.round(saved[2] * scale))
+      );
+    }
+  }catch(e){ console.warn('[Resizer] restoreWidths error:', e); }
+}
+
+function initResizer(resizerId, colIndex){
+  const el = document.getElementById(resizerId);
+  if(!el){ console.error('[Resizer] element not found:', resizerId); return; }
+  console.log('[Resizer] binding', resizerId, 'colIndex', colIndex);
+
+  let startX, startCols;
+
+  function onStart(clientX, pointerId){
+    if(!rIsLandscape()){ console.log('[Resizer] skipped — portrait'); return; }
+    const cols = rGetCols();
+    if(!cols){ console.warn('[Resizer] onStart: getCols null'); return; }
+    startX = clientX;
+    startCols = cols;
+    el.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+    if(pointerId !== undefined){
+      try{ el.setPointerCapture(pointerId); console.log('[Resizer] captured pointer', pointerId); }
+      catch(e){ console.warn('[Resizer] setPointerCapture failed', e); }
+    }
+    console.log('[Resizer] drag start x=', clientX, 'cols=', cols);
+  }
+
+  function onMove(clientX){
+    if(startX === undefined) return;
+    const dx = clientX - startX;
+    let [w1, w2, w3] = startCols;
+    const total = w1 + w2 + w3;
+    if(colIndex === 0){
+      w1 = Math.max(_R.MIN_COL, Math.min(total - _R.MIN_COL*2, w1 + dx));
+      w2 = Math.max(_R.MIN_COL, total - w1 - w3);
+    } else {
+      w3 = Math.max(_R.MIN_COL, Math.min(total - _R.MIN_COL*2, w3 - dx));
+      w2 = Math.max(_R.MIN_COL, total - w1 - w3);
+    }
+    rSetCols(w1, w2, w3);
+  }
+
+  function onEnd(){
+    if(startX === undefined) return;
+    startX = undefined;
+    el.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    document.body.style.webkitUserSelect = '';
+    console.log('[Resizer] drag end');
+  }
+
+  el.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    onStart(e.clientX, e.pointerId);
   });
-
-  // Re-apply on orientation change
-  window.addEventListener('resize', ()=>{
-    if(isLandscape()) setTimeout(restoreWidths, 350);
+  document.addEventListener('pointermove', e=>{
+    if(startX !== undefined) onMove(e.clientX);
   });
-})();
+  document.addEventListener('pointerup', onEnd);
+  document.addEventListener('pointercancel', onEnd);
+
+  // Double-click → reset
+  el.addEventListener('dblclick', ()=>{
+    localStorage.removeItem(_R.STORAGE_KEY);
+    rGetApp().style.gridTemplateColumns = '';
+    setTimeout(()=>{ if(typeof map!=='undefined'&&map) map.invalidateSize(); }, 150);
+    console.log('[Resizer] reset to default');
+  });
+}
+
+window.addEventListener('resize', ()=>{
+  if(rIsLandscape()) setTimeout(rRestoreWidths, 350);
+});
 
 // ── SETTINGS PANEL ──
 function toggleSettings(){
@@ -1891,7 +1883,15 @@ window.addEventListener('load',()=>{
   buildAirportTabs();
   renderNotams();
   ldStatus('取得定位...');
-  setTimeout(locate,300);
+  setTimeout(locate, 300);
+  // Resizer — 在所有佈局完成後初始化
+  setTimeout(()=>{
+    console.log('[Resizer] init start');
+    initResizer('resizer-1', 0);
+    initResizer('resizer-2', 1);
+    rRestoreWidths();
+    console.log('[Resizer] init done');
+  }, 500);
 });
 </script>
 </body>
