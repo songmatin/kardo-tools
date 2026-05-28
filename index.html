@@ -512,6 +512,31 @@ body{font-family:var(--sans);color:#fff;}
     </div>
 
     <div class="sec">
+      <div class="sec-title">AQI · 空氣品質</div>
+      <div id="aqi-main" style="display:flex;align-items:center;gap:10px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);padding:9px 11px;margin-bottom:6px;">
+        <div id="aqi-badge" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono);font-size:16px;font-weight:900;background:var(--w10);">--</div>
+        <div style="flex:1;min-width:0;">
+          <div id="aqi-status" style="font-size:13px;font-weight:600;color:var(--w85);">載入中...</div>
+          <div id="aqi-station" style="font-size:9px;color:var(--w55);margin-top:2px;">偵測最近測站</div>
+        </div>
+      </div>
+      <div class="card-grid" style="grid-template-columns:1fr 1fr 1fr;gap:5px;">
+        <div class="card" style="padding:6px 8px;">
+          <div class="card-label">PM2.5</div>
+          <div class="card-val" id="aqi-pm25" style="font-size:14px;color:var(--w85);">--<span class="card-unit">μg</span></div>
+        </div>
+        <div class="card" style="padding:6px 8px;">
+          <div class="card-label">PM10</div>
+          <div class="card-val" id="aqi-pm10" style="font-size:14px;color:var(--w85);">--<span class="card-unit">μg</span></div>
+        </div>
+        <div class="card" style="padding:6px 8px;">
+          <div class="card-label">O₃</div>
+          <div class="card-val" id="aqi-o3" style="font-size:14px;color:var(--w85);">--<span class="card-unit">ppb</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
       <div class="sec-title">Assessment · 飛行評估</div>
       <div id="assess-list"></div>
     </div>
@@ -818,6 +843,7 @@ async function fetchWeather(){
     renderWindAlt(ws10);
     updateAssessment(ws10,wg,c.visibility,c.cloud_cover);
     fetchTides();
+    fetchAQI();
     ldStatus('完成');
   }catch(e){ldStatus('天氣載入失敗');}
 }
@@ -1120,6 +1146,69 @@ async function fetchFlights(){
     document.getElementById('flight-list').innerHTML='<div style="padding:12px;font-size:10px;color:var(--red);text-align:center;">查詢失敗，請稍後再試</div>';
   }
   if(btn) btn.disabled=false;
+}
+
+// ── AQI ──
+const AQI_COLORS = {
+  '良好':    { bg:'#32d264', text:'#000' },
+  '普通':    { bg:'#ffd60a', text:'#000' },
+  '對敏感族群不健康': { bg:'#ff9f0a', text:'#000' },
+  '不健康':  { bg:'#ff4f41', text:'#fff' },
+  '非常不健康': { bg:'#c084fc', text:'#fff' },
+  '有害':    { bg:'#7f1d1d', text:'#fff' },
+};
+
+async function fetchAQI(){
+  if(!lat || !lng) return;
+  try{
+    const url = 'https://data.moenv.gov.tw/api/v1/aqx_p_432?api_key=e8dd42e6-9b8b-43f8-991e-b3dee723a52f&format=JSON&limit=200';
+    const res = await fetch(url);
+    const json = await res.json();
+    const records = json?.records;
+    if(!records || !records.length) throw new Error('no AQI records');
+
+    // Find nearest station by GPS
+    let best = null, minD = Infinity;
+    records.forEach(r => {
+      const rlat = parseFloat(r.latitude), rlng = parseFloat(r.longitude);
+      if(isNaN(rlat) || isNaN(rlng)) return;
+      const d = Math.hypot(rlat - lat, rlng - lng);
+      if(d < minD){ minD = d; best = r; }
+    });
+    if(!best) throw new Error('no nearest station');
+
+    const aqi    = parseInt(best.aqi) || 0;
+    const status = best.status || '未知';
+    const pm25   = best['pm2.5'] || '--';
+    const pm10   = best.pm10    || '--';
+    const o3     = best.o3      || '--';
+    const stn    = best.sitename || '--';
+
+    const col = AQI_COLORS[status] || { bg:'var(--w10)', text:'var(--w85)' };
+
+    // Badge
+    const badge = document.getElementById('aqi-badge');
+    badge.textContent = aqi;
+    badge.style.background = col.bg;
+    badge.style.color = col.text;
+
+    document.getElementById('aqi-status').textContent  = status;
+    document.getElementById('aqi-status').style.color  = col.bg;
+    document.getElementById('aqi-station').textContent = `測站：${stn}`;
+    document.getElementById('aqi-pm25').innerHTML = `${pm25}<span class="card-unit">μg</span>`;
+    document.getElementById('aqi-pm10').innerHTML = `${pm10}<span class="card-unit">μg</span>`;
+    document.getElementById('aqi-o3').innerHTML   = `${o3}<span class="card-unit">ppb</span>`;
+
+    // Color pm25 by level
+    const pm25v = parseFloat(pm25);
+    document.getElementById('aqi-pm25').style.color =
+      pm25v < 15 ? 'var(--green)' : pm25v < 35 ? 'var(--orange)' : 'var(--red)';
+
+  } catch(e){
+    console.warn('AQI fetch error:', e.message);
+    document.getElementById('aqi-status').textContent = '資料載入失敗';
+    document.getElementById('aqi-station').textContent = '請稍後再試';
+  }
 }
 
 // ── ASSESSMENT ──
