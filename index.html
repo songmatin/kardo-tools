@@ -812,7 +812,14 @@ function loadNFZ(){
 }
 
 // 台灣全島範圍 bounds（雷達圖對應的經緯度範圍）
-const RADAR_BOUNDS = [[20.0, 118.0], [26.5, 123.5]];
+// 按 Shift+R 可打開即時校準工具
+let RADAR_BOUNDS = (()=>{
+  try{
+    const s = JSON.parse(localStorage.getItem('ka_radar_bounds'));
+    if(s && s.length===2) return s;
+  }catch(e){}
+  return [[20.0, 118.0], [26.5, 123.5]];
+})();
 let radarLayer = null;
 let radarTimer = null;
 
@@ -1637,6 +1644,109 @@ function initTheme(){
     document.getElementById('theme-btn').textContent = '🌙';
   }
 }
+
+// ── RADAR BOUNDS 校準工具（Shift+R 呼出）──
+(function(){
+  const PANEL_ID = 'radar-calib-panel';
+
+  function buildPanel(){
+    if(document.getElementById(PANEL_ID)) return;
+    const b = RADAR_BOUNDS;
+    // [S, W], [N, E]
+    let S=b[0][0], W=b[0][1], N=b[1][0], E=b[1][1];
+
+    const panel = document.createElement('div');
+    panel.id = PANEL_ID;
+    panel.style.cssText = `
+      position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+      z-index:9999;background:rgba(20,18,16,0.97);border:0.5px solid rgba(184,150,90,0.5);
+      border-radius:12px;padding:14px 18px;min-width:320px;
+      font-family:'DM Sans',sans-serif;font-size:11px;color:#fff;
+      box-shadow:0 8px 32px rgba(0,0,0,0.6);
+    `;
+
+    function row(label, val, min, max, step, id){
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="width:70px;color:rgba(255,255,255,0.55);font-size:10px;">${label}</span>
+        <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"
+          style="flex:1;accent-color:#b8965a;">
+        <span id="${id}_v" style="width:52px;text-align:right;font-family:monospace;font-size:10px;color:#b8965a;">${val}</span>
+      </div>`;
+    }
+
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:10px;letter-spacing:.12em;color:#b8965a;text-transform:uppercase;">雷達 Bounds 校準</span>
+        <span onclick="document.getElementById('${PANEL_ID}').remove()" style="cursor:pointer;color:rgba(255,255,255,0.4);font-size:14px;">✕</span>
+      </div>
+      ${row('南界 S lat', S, 17, 24, 0.05, 'rc_s')}
+      ${row('北界 N lat', N, 23, 30, 0.05, 'rc_n')}
+      ${row('西界 W lng', W, 115, 121, 0.05, 'rc_w')}
+      ${row('東界 E lng', E, 120, 127, 0.05, 'rc_e')}
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button id="rc_apply" style="flex:1;background:#b8965a;border:none;border-radius:6px;color:#000;font-size:11px;font-weight:700;padding:6px;cursor:pointer;">套用到地圖</button>
+        <button id="rc_save" style="flex:1;background:transparent;border:0.5px solid rgba(184,150,90,0.5);border-radius:6px;color:#b8965a;font-size:11px;padding:6px;cursor:pointer;">儲存設定</button>
+        <button id="rc_reset" style="background:transparent;border:0.5px solid rgba(255,255,255,0.15);border-radius:6px;color:rgba(255,255,255,0.4);font-size:11px;padding:6px 10px;cursor:pointer;">重設</button>
+      </div>
+      <div style="margin-top:7px;font-size:9px;color:rgba(255,255,255,0.3);">Shift+R 開關 · 目前: S<span id="rc_cur"></span></div>
+    `;
+    document.body.appendChild(panel);
+
+    const ids = ['rc_s','rc_n','rc_w','rc_e'];
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      el.addEventListener('input',()=>{
+        document.getElementById(id+'_v').textContent = parseFloat(el.value).toFixed(2);
+      });
+    });
+
+    function getVals(){
+      return [
+        [parseFloat(document.getElementById('rc_s').value), parseFloat(document.getElementById('rc_w').value)],
+        [parseFloat(document.getElementById('rc_n').value), parseFloat(document.getElementById('rc_e').value)]
+      ];
+    }
+
+    function updateCur(){
+      const v = getVals();
+      document.getElementById('rc_cur').textContent =
+        ` ${v[0][0].toFixed(2)}  N ${v[1][0].toFixed(2)}  W ${v[0][1].toFixed(2)}  E ${v[1][1].toFixed(2)}`;
+    }
+    ids.forEach(id=> document.getElementById(id).addEventListener('input', updateCur));
+    updateCur();
+
+    document.getElementById('rc_apply').onclick = ()=>{
+      RADAR_BOUNDS = getVals();
+      if(radarLayer && radarOverlayOn){
+        const WORKER = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
+        const url = `${WORKER}?type=radar&_t=${Date.now()}`;
+        map.removeLayer(radarLayer);
+        radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity:0.75,zIndex:400,interactive:false}).addTo(map);
+      }
+    };
+
+    document.getElementById('rc_save').onclick = ()=>{
+      RADAR_BOUNDS = getVals();
+      localStorage.setItem('ka_radar_bounds', JSON.stringify(RADAR_BOUNDS));
+      document.getElementById('rc_save').textContent = '✓ 已儲存';
+      setTimeout(()=>{ document.getElementById('rc_save').textContent = '儲存設定'; }, 1500);
+    };
+
+    document.getElementById('rc_reset').onclick = ()=>{
+      localStorage.removeItem('ka_radar_bounds');
+      RADAR_BOUNDS = [[20.0, 118.0], [26.5, 123.5]];
+      document.getElementById(PANEL_ID).remove();
+      buildPanel();
+    };
+  }
+
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'R' && e.shiftKey){
+      const existing = document.getElementById(PANEL_ID);
+      if(existing) existing.remove(); else buildPanel();
+    }
+  });
+})();
 
 // ── INIT ──
 window.addEventListener('load',()=>{
