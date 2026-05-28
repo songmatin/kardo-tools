@@ -768,7 +768,7 @@ function loadRadar(){
   const WORKER = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
   const url = `${WORKER}?type=radar&_t=${Date.now()}`;
   if(radarLayer) map.removeLayer(radarLayer);
-  radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity: 0.6, zIndex: 400});
+  radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity: 0.75, zIndex: 400, interactive: false});
   const btn = document.getElementById('lr-radar');
   if(btn && btn.classList.contains('on')) radarLayer.addTo(map);
 }
@@ -1228,11 +1228,11 @@ const AQI_COLORS = {
 async function fetchAQI(){
   if(!lat || !lng) return;
   try{
-    // 透過 Cloudflare Worker proxy 串環境部官方台灣 AQI
     const url = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
     const res = await fetch(url);
     const json = await res.json();
-    const records = json?.records;
+    // Worker 直接回傳陣列，或包在 records 裡
+    const records = Array.isArray(json) ? json : json?.records;
     if(!records || !records.length) throw new Error('no records');
 
     let best = null, minD = Infinity;
