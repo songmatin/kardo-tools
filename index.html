@@ -1104,70 +1104,55 @@ function renderWindAlt(ws){
 // ── TIDE (CWA Real Data) ──
 const CWA_KEY = 'CWA-88714A94-2A9A-4B48-B5E4-E7595BDF48D9';
 
-// 106 個沿海鄉鎮（從官方文件取得座標）
-const TIDE_LOCATIONS = [
-  {name:'新北市貢寮區',lat:25.0217,lng:121.95},{name:'基隆市中正區',lat:25.1506,lng:121.79},
-  {name:'新北市淡水區',lat:25.1915,lng:121.414},{name:'新北市金山區',lat:25.2475,lng:121.638},
-  {name:'桃園市觀音區',lat:25.0669,lng:121.08},{name:'新竹市北區',lat:24.8486,lng:120.9206},
-  {name:'苗栗縣通霄鎮',lat:24.4948,lng:120.6547},{name:'臺中市梧棲區',lat:24.2878,lng:120.5331},
-  {name:'彰化縣鹿港鎮',lat:24.094,lng:120.3618},{name:'彰化縣芳苑鄉',lat:23.9683,lng:120.3145},
-  {name:'雲林縣麥寮鄉',lat:23.7861,lng:120.1603},{name:'雲林縣口湖鄉',lat:23.5654,lng:120.1379},
-  {name:'嘉義縣東石鄉',lat:23.4494,lng:120.14},{name:'嘉義縣布袋鎮',lat:23.3889,lng:120.1443},
-  {name:'臺南市北門區',lat:23.2374,lng:120.0755},{name:'臺南市七股區',lat:23.1371,lng:120.0734},
-  {name:'臺南市安平區',lat:22.9786,lng:120.1758},{name:'高雄市旗津區',lat:22.5801,lng:120.2875},
-  {name:'高雄市小港區',lat:22.5337,lng:120.3179},{name:'高雄市林園區',lat:22.4923,lng:120.3785},
-  {name:'屏東縣東港鎮',lat:22.465,lng:120.4383},{name:'屏東縣恆春鎮',lat:21.9458,lng:120.7453},
-  {name:'臺東縣臺東市',lat:22.7908,lng:121.1931},{name:'臺東縣成功鎮',lat:23.0972,lng:121.38},
-  {name:'花蓮縣花蓮市',lat:23.9806,lng:121.6236},{name:'宜蘭縣蘇澳鎮',lat:24.5925,lng:121.8669},
-  {name:'宜蘭縣頭城鎮',lat:24.8672,lng:121.8375},{name:'澎湖縣馬公市',lat:23.5603,lng:119.5781},
-  {name:'金門縣金城鎮',lat:24.4211,lng:118.2892},{name:'連江縣南竿鄉',lat:26.1617,lng:119.9428},
-];
-
-function nearestTideLocation(userLat, userLng){
-  let best = TIDE_LOCATIONS[0], minD = Infinity;
-  TIDE_LOCATIONS.forEach(s=>{
-    const d = Math.hypot(s.lat - userLat, s.lng - userLng);
-    if(d < minD){ minD = d; best = s; }
-  });
-  return best;
-}
-
 async function fetchTides(){
   if(!lat || !lng) return;
-  const loc = nearestTideLocation(lat, lng);
   const tideDisc = document.getElementById('tide-disc');
 
   try{
-    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&locationName=${encodeURIComponent(loc.name)}&format=JSON`;
+    // 不帶 locationName，抓全部測站，再用實際座標比對最近的
+    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&format=JSON`;
     const res = await fetch(url);
     const json = await res.json();
 
-    // Correct structure: records.TideForecasts[].Location
     const forecasts = json?.records?.TideForecasts;
     if(!forecasts || !forecasts.length) throw new Error('no TideForecasts');
 
-    const locationData = forecasts.find(
-      item => item.Location?.LocationName === loc.name
-    );
-    if(!locationData) throw new Error(`找不到測站: ${loc.name}`);
+    // 每個測站有 Location.Latitude / Location.Longitude
+    // 找出座標最接近使用者的測站
+    let bestForecast = null, minD = Infinity;
+    forecasts.forEach(item => {
+      const loc = item.Location;
+      const sLat = parseFloat(loc?.Latitude);
+      const sLng = parseFloat(loc?.Longitude);
+      if(isNaN(sLat) || isNaN(sLng)) return;
+      const d = Math.hypot(sLat - lat, sLng - lng);
+      if(d < minD){ minD = d; bestForecast = item; }
+    });
 
-    // Daily tides: Location.TimePeriods.Daily[]
-    const daily = locationData.Location?.TimePeriods?.Daily;
+    if(!bestForecast) throw new Error('找不到最近測站');
+
+    const loc = bestForecast.Location;
+    const stationName = loc.LocationName;
+    const daily = loc?.TimePeriods?.Daily;
     if(!daily || !daily.length) throw new Error('no Daily');
 
-    // Today = first entry, Time[] has individual high/low records
     const times = daily[0]?.Time || [];
     if(!times.length) throw new Error('no Time entries');
 
     const tides = times.map(t => ({
-      type:   t.Tide,        // '滿潮' or '乾潮'（正確欄位名稱）
+      type:   t.Tide,
       time:   t.DateTime ? t.DateTime.slice(11,16) : '--:--',
       height: (() => {
         const h = t.TideHeights;
         const v = h?.AboveChartDatum ?? h?.AboveMSL ?? h?.LandSurveyDatum;
-        return v != null ? parseInt(v) : '--';  // cm，直接取整數
-      })()
+        return v != null ? parseInt(v) : '--';
+      })(),
+      _raw: t.TideHeights
     }));
+
+    console.log('[Tide] 測站:', stationName,
+      '座標:', loc.Latitude, loc.Longitude,
+      '今日:', tides.map(t=>`${t.type} ${t.time} ${t.height}cm`));
 
     const highs = tides.filter(t => t.type === '滿潮');
     const lows  = tides.filter(t => t.type === '乾潮');
@@ -1182,13 +1167,16 @@ async function fetchTides(){
     fill('lt1', 'lt1h', lows[0]);
     fill('ht2', 'ht2h', highs[1] || lows[1]);
 
-    if(tideDisc) tideDisc.innerHTML = `最近測站：${loc.name} · 資料來源：中央氣象署`;
+    const sampleH = tides[0]?._raw;
+    const datum = sampleH?.AboveChartDatum != null ? '海圖基準面' :
+                  sampleH?.AboveMSL        != null ? '平均海面'   : '高程基準';
+    if(tideDisc) tideDisc.innerHTML = `測站：${stationName} · 基準：${datum} · 來源：中央氣象署`;
 
   } catch(e){
     console.warn('Tide fetch error:', e.message);
     ['ht1','lt1','ht2'].forEach(id => document.getElementById(id).textContent = '--:--');
-    ['ht1h','lt1h','ht2h'].forEach(id => document.getElementById(id).textContent = '--m');
-    if(tideDisc) tideDisc.innerHTML = `潮汐資料載入失敗（${loc.name}）· 請查中央氣象署`;
+    ['ht1h','lt1h','ht2h'].forEach(id => document.getElementById(id).textContent = '--cm');
+    if(tideDisc) tideDisc.innerHTML = `潮汐資料載入失敗 · 請查中央氣象署`;
   }
 }
 
