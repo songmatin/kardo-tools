@@ -402,7 +402,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 
     <div id="layer-panel">
       <div class="lp-title">空域圖層</div>
-      <div class="layer-row" id="lr-radar" onclick="toggleLayer('radar',this)"><div class="layer-swatch" style="background:#60d4f0;"></div><span>雷達回波</span><div class="layer-toggle"></div></div>
       <div class="layer-row on" id="lr-county_red" onclick="toggleLayer('county_red',this)"><div class="layer-swatch" style="background:#ff4f41;"></div><span>縣市紅區</span><div class="layer-toggle"></div></div>
       <div class="layer-row on" id="lr-county_yellow" onclick="toggleLayer('county_yellow',this)"><div class="layer-swatch" style="background:#ff9f0a;"></div><span>縣市黃區</span><div class="layer-toggle"></div></div>
       <div class="layer-row on" id="lr-park" onclick="toggleLayer('park',this)"><div class="layer-swatch" style="background:#888;"></div><span>國家公園</span><div class="layer-toggle"></div></div>
@@ -538,6 +537,37 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
         <button id="notam-add" onclick="addNotam()">+ 加入</button>
       </div>
       <div id="notam-list"></div>
+    </div>
+
+    <div class="sec" id="radar-sec">
+      <div class="sec-title">Radar · 雷達回波</div>
+      <div id="radar-card" style="background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);overflow:hidden;">
+        <!-- 預覽圖 -->
+        <div style="position:relative;width:100%;aspect-ratio:1.4/1;background:#0a0f14;overflow:hidden;">
+          <img id="radar-img" src="" alt="雷達回波"
+            style="width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .5s;">
+          <div id="radar-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--w30);letter-spacing:.08em;">載入中…</div>
+          <div id="radar-ts" style="position:absolute;bottom:5px;right:7px;font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.45);letter-spacing:.05em;"></div>
+          <!-- 地圖疊層：僅示意台灣位置 -->
+          <div style="position:absolute;top:5px;left:7px;font-size:8px;color:rgba(96,212,240,0.7);letter-spacing:.06em;">中央氣象署整合回波</div>
+        </div>
+        <!-- 控制列 -->
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:0.5px solid var(--border);">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:9px;color:var(--w55);letter-spacing:.06em;">地圖疊加顯示</div>
+            <div id="radar-map-status" style="font-size:8px;color:var(--w30);margin-top:1px;">已關閉</div>
+          </div>
+          <div id="radar-map-toggle" onclick="toggleRadarOverlay()"
+            style="width:36px;height:20px;border-radius:10px;background:var(--w30);position:relative;cursor:pointer;flex-shrink:0;transition:background .15s;">
+            <div id="radar-map-knob" style="position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s;"></div>
+          </div>
+          <button onclick="refreshRadarPanel()" title="重新整理"
+            style="background:transparent;border:0.5px solid var(--border);border-radius:5px;color:var(--w55);font-size:11px;padding:3px 7px;cursor:pointer;flex-shrink:0;transition:all .12s;"
+            onmouseover="this.style.borderColor='var(--accent-bd)';this.style.color='var(--accent)'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--w55)'">↻</button>
+        </div>
+      </div>
+      <div class="disc" style="padding:4px 0 0;">每 10 分鐘自動更新 · 來源：中央氣象署</div>
     </div>
 
     <div class="sec">
@@ -787,35 +817,78 @@ let radarLayer = null;
 let radarTimer = null;
 
 function initRadar(){
-  // 雷達回波：用氣象署整合回波 PNG，每10分鐘更新
   loadRadar();
 }
+
+// 追蹤地圖疊層是否開啟（預設關閉，panel 只顯示圖片）
+let radarOverlayOn = false;
 
 function loadRadar(){
   const WORKER = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
   const url = `${WORKER}?type=radar&_t=${Date.now()}`;
-  if(radarLayer) map.removeLayer(radarLayer);
-  radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity: 0.75, zIndex: 400, interactive: false});
-  const btn = document.getElementById('lr-radar');
-  if(btn && btn.classList.contains('on')) radarLayer.addTo(map);
+
+  // 更新 panel 預覽圖
+  const img = document.getElementById('radar-img');
+  const loading = document.getElementById('radar-loading');
+  const ts = document.getElementById('radar-ts');
+  if(img){
+    const tmp = new Image();
+    tmp.onload = ()=>{
+      img.src = tmp.src;
+      img.style.opacity = '1';
+      if(loading) loading.style.display = 'none';
+      const now = new Date();
+      if(ts) ts.textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 更新`;
+    };
+    tmp.onerror = ()=>{ if(loading) loading.textContent = '載入失敗'; };
+    tmp.src = url;
+  }
+
+  // 地圖疊層（只有開啟時才更新）
+  if(radarOverlayOn){
+    if(radarLayer) map.removeLayer(radarLayer);
+    radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity: 0.75, zIndex: 400, interactive: false});
+    radarLayer.addTo(map);
+  }
+}
+
+function refreshRadarPanel(){
+  const loading = document.getElementById('radar-loading');
+  const img = document.getElementById('radar-img');
+  if(loading){ loading.style.display='flex'; loading.textContent='載入中…'; }
+  if(img) img.style.opacity='0';
+  loadRadar();
+}
+
+function toggleRadarOverlay(){
+  radarOverlayOn = !radarOverlayOn;
+  const toggle = document.getElementById('radar-map-toggle');
+  const knob   = document.getElementById('radar-map-knob');
+  const status = document.getElementById('radar-map-status');
+
+  if(radarOverlayOn){
+    if(toggle) toggle.style.background = 'var(--accent)';
+    if(knob)   knob.style.left = '19px';
+    if(status) status.textContent = '疊加中';
+    // 立即載入到地圖
+    const WORKER = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
+    const url = `${WORKER}?type=radar&_t=${Date.now()}`;
+    if(radarLayer) map.removeLayer(radarLayer);
+    radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity:0.75, zIndex:400, interactive:false});
+    radarLayer.addTo(map);
+    if(!radarTimer) radarTimer = setInterval(loadRadar, 10*60*1000);
+  } else {
+    if(toggle) toggle.style.background = 'var(--w30)';
+    if(knob)   knob.style.left = '3px';
+    if(status) status.textContent = '已關閉';
+    if(radarLayer){ map.removeLayer(radarLayer); radarLayer=null; }
+    if(radarTimer){ clearInterval(radarTimer); radarTimer=null; }
+  }
 }
 
 function toggleLayer(name, el){
   el.classList.toggle('on');
   const on = el.classList.contains('on');
-
-  if(name === 'radar'){
-    if(on){
-      if(!radarLayer) loadRadar();
-      else radarLayer.addTo(map);
-      // 每10分鐘自動刷新
-      radarTimer = setInterval(loadRadar, 10*60*1000);
-    } else {
-      if(radarLayer) map.removeLayer(radarLayer);
-      if(radarTimer){ clearInterval(radarTimer); radarTimer=null; }
-    }
-    return;
-  }
 
   if(nfzLayers[name]){
     if(on) nfzLayers[name].addTo(map); else map.removeLayer(nfzLayers[name]);
