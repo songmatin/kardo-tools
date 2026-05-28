@@ -765,11 +765,10 @@ function initRadar(){
 }
 
 function loadRadar(){
-  const ts = Math.floor(Date.now() / (10*60*1000)) * (10*60*1000); // 10分鐘 cache buster
-  const url = `https://opendata.cwa.gov.tw/fileapi/v1/opendataapi/O-A0058-003?Authorization=${CWA_KEY}&downloadType=WEB&format=PNG&_t=${ts}`;
+  const WORKER = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
+  const url = `${WORKER}?type=radar&_t=${Date.now()}`;
   if(radarLayer) map.removeLayer(radarLayer);
   radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity: 0.6, zIndex: 400});
-  // 只有開關打開才顯示
   const btn = document.getElementById('lr-radar');
   if(btn && btn.classList.contains('on')) radarLayer.addTo(map);
 }
