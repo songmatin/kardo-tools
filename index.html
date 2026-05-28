@@ -1,28 +1,101 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>飛行儀表板 — Kardo Aerial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
+<style>
+/* ... 請保留您原先完整的 CSS 樣式 ... */
+</style>
+</head>
+<body>
 <script>
-// ── 新增雷達與空品整合函式 ──
-// 1. 初始化雷達
-function initRadar(){
-    const WORKER_URL = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev'; // 請確保此處為您的 Worker 網址
-    radarLayer = L.imageOverlay(`${WORKER_URL}?t=${Date.now()}`, [[20.0, 118.0], [26.5, 123.5]], {opacity: 0.7});
-    if(document.getElementById('lr-radar').classList.contains('on')) radarLayer.addTo(map);
-    setInterval(loadRadar, 600000); // 每10分鐘重抓一次
+// ── CONSTANTS & GLOBAL VARS ──
+const CWA_KEY = 'CWA-88714A94-2A9A-4B48-B5E4-E7595BDF48D9';
+const WORKER_URL = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
+let lat, lng, map, radarLayer, radarTimer;
+
+// ── 初始化 ──
+window.addEventListener('load', () => {
+    ldStatus('初始化中...');
+    initTheme();
+    initMap();
+    buildAirportTabs();
+    renderNotams();
+    setTimeout(locate, 500);
+});
+
+// ── 雷達圖功能 ──
+function loadRadar() {
+    const url = `${WORKER_URL}?type=radar&_t=${Date.now()}`;
+    if(radarLayer) map.removeLayer(radarLayer);
+    radarLayer = L.imageOverlay(url, [[20.0, 118.0], [26.5, 123.5]], {opacity: 0.75, zIndex: 400});
+    const btn = document.getElementById('lr-radar');
+    if(btn && btn.classList.contains('on')) radarLayer.addTo(map);
 }
 
-// 2. 整合預報與實況
+function toggleLayer(name, el) {
+    el.classList.toggle('on');
+    const on = el.classList.contains('on');
+    if(name === 'radar') {
+        if(on) { loadRadar(); radarTimer = setInterval(loadRadar, 600000); }
+        else { if(radarLayer) map.removeLayer(radarLayer); clearInterval(radarTimer); }
+        return;
+    }
+    // ... 其他圖層邏輯 ...
+}
+
+// ── 天氣與空品整合抓取 ──
 async function fetchWeather() {
-    ldStatus('載入氣象資料...');
+    ldStatus('同步氣象與空品...');
     try {
-        // 同時發送請求
         await Promise.all([
-            fetchOpenMeteo(), // 您的趨勢預報邏輯
-            fetchAQI()        // 您的空氣品質邏輯
+            // 氣象資訊
+            (async () => {
+                const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,visibility,cloud_cover&wind_speed_unit=ms&timezone=Asia%2FTaipei`;
+                const d = await(await fetch(u)).json();
+                // 渲染天氣 UI...
+            })(),
+            // 潮汐
+            fetchTides(),
+            // 空品 (環境部)
+            fetchAQI()
         ]);
-        ldStatus('完成');
+        ldStatus('資料更新完成');
     } catch(e) {
-        ldStatus('資料同步失敗');
+        ldStatus('部分資料更新失敗');
     }
 }
+
+async function fetchAQI() {
+    if (!lat || !lng) return;
+    try {
+        const res = await fetch(WORKER_URL); // 透過 Worker 轉發避免 CORS
+        const data = await res.json();
+        const records = Array.isArray(data) ? data : data?.records;
+        
+        let best = null, minD = Infinity;
+        records.forEach(r => {
+            const d = Math.hypot(parseFloat(r.latitude) - lat, parseFloat(r.longitude) - lng);
+            if (d < minD) { minD = d; best = r; }
+        });
+
+        if (best) {
+            document.getElementById('aqi-badge').textContent = parseInt(best.aqi);
+            document.getElementById('aqi-status').textContent = parseInt(best.aqi) <= 50 ? '良好' : '普通';
+            document.getElementById('aqi-station').textContent = `測站：${best.sitename}`;
+        }
+    } catch(e) {
+        console.error('AQI Error', e);
+    }
+}
+
+// ── 其他功能函數 (locate, updateSun, etc.) 維持不變 ──
 </script>
+</body>
 </html>
