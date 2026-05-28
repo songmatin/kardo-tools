@@ -1161,6 +1161,19 @@ const AQI_COLORS = {
 
 async function fetchAQI(){
   if(!lat || !lng) return;
+
+  const CACHE_KEY = 'ka_aqi_cache';
+  const CACHE_TTL = 30 * 60 * 1000; // 30 分鐘
+
+  // 嘗試使用快取
+  try{
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
+    if(cached && (Date.now() - cached.ts) < CACHE_TTL){
+      renderAQI(cached.data, cached.stn);
+      return;
+    }
+  } catch(e){}
+
   try{
     const key = 'c29131c1-b41d-46ed-915c-2f9c2b6271d8';
     const url = `https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=${key}&limit=1000&format=JSON`;
@@ -1169,52 +1182,65 @@ async function fetchAQI(){
     const records = json?.records;
     if(!records || !records.length) throw new Error('no records');
 
-    // 找最近測站
+    // 找最近測站，並過濾掉座標異常或 AQI 缺失的站
     let best = null, minD = Infinity;
     records.forEach(r => {
       const rlat = parseFloat(r.latitude), rlng = parseFloat(r.longitude);
-      if(isNaN(rlat)||isNaN(rlng)) return;
+      if(isNaN(rlat) || isNaN(rlng)) return;
+      if(!r.aqi || r.aqi === '' || r.aqi === '-') return; // 過濾無效資料
       const d = Math.hypot(rlat - lat, rlng - lng);
       if(d < minD){ minD = d; best = r; }
     });
-    if(!best) throw new Error('no nearest station');
+    if(!best) throw new Error('no valid station');
 
-    const aqi  = parseInt(best.aqi) || 0;
-    const stn  = best.sitename || '--';
-    const pm25 = best['pm2.5'] ?? best.pm25 ?? '--';
-    const pm10 = best.pm10 ?? '--';
-    const o3   = best.o3   ?? '--';
+    // 安全取值，空值補 '--'
+    const safeVal = v => (v !== undefined && v !== null && v !== '') ? v : '--';
+    const data = {
+      aqi:  parseInt(best.aqi) || 0,
+      pm25: safeVal(best['pm2.5'] ?? best.pm25),
+      pm10: safeVal(best.pm10),
+      o3:   safeVal(best.o3),
+    };
+    const stn = best.sitename || '--';
 
-    // AQI 等級
-    let status, col;
-    if     (aqi<=50)  {status='良好';             col={bg:'#32d264',text:'#000'};}
-    else if(aqi<=100) {status='普通';             col={bg:'#ffd60a',text:'#000'};}
-    else if(aqi<=150) {status='對敏感族群不健康'; col={bg:'#ff9f0a',text:'#000'};}
-    else if(aqi<=200) {status='不健康';           col={bg:'#ff4f41',text:'#fff'};}
-    else if(aqi<=300) {status='非常不健康';       col={bg:'#c084fc',text:'#fff'};}
-    else              {status='有害';             col={bg:'#7f1d1d',text:'#fff'};}
+    // 存快取
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data, stn }));
 
-    const badge = document.getElementById('aqi-badge');
-    badge.textContent      = aqi;
-    badge.style.background = col.bg;
-    badge.style.color      = col.text;
-
-    document.getElementById('aqi-status').textContent  = status;
-    document.getElementById('aqi-status').style.color  = col.bg;
-    document.getElementById('aqi-station').textContent = `測站：${stn}`;
-    document.getElementById('aqi-pm25').innerHTML = `${pm25}<span class="card-unit">μg</span>`;
-    document.getElementById('aqi-pm10').innerHTML = `${pm10}<span class="card-unit">μg</span>`;
-    document.getElementById('aqi-o3').innerHTML   = `${o3}<span class="card-unit">ppb</span>`;
-
-    const pm25v = parseFloat(pm25);
-    document.getElementById('aqi-pm25').style.color =
-      pm25v<15?'var(--green)':pm25v<35?'var(--orange)':'var(--red)';
+    renderAQI(data, stn);
 
   } catch(e){
     console.warn('AQI error:', e.message);
     document.getElementById('aqi-status').textContent  = '資料載入失敗';
     document.getElementById('aqi-station').textContent = e.message;
   }
+}
+
+function renderAQI(data, stn){
+  const { aqi, pm25, pm10, o3 } = data;
+
+  let status, col;
+  if     (aqi<=50)  {status='良好';             col={bg:'#32d264',text:'#000'};}
+  else if(aqi<=100) {status='普通';             col={bg:'#ffd60a',text:'#000'};}
+  else if(aqi<=150) {status='對敏感族群不健康'; col={bg:'#ff9f0a',text:'#000'};}
+  else if(aqi<=200) {status='不健康';           col={bg:'#ff4f41',text:'#fff'};}
+  else if(aqi<=300) {status='非常不健康';       col={bg:'#c084fc',text:'#fff'};}
+  else              {status='有害';             col={bg:'#7f1d1d',text:'#fff'};}
+
+  const badge = document.getElementById('aqi-badge');
+  badge.textContent      = aqi;
+  badge.style.background = col.bg;
+  badge.style.color      = col.text;
+
+  document.getElementById('aqi-status').textContent  = status;
+  document.getElementById('aqi-status').style.color  = col.bg;
+  document.getElementById('aqi-station').textContent = `測站：${stn}`;
+  document.getElementById('aqi-pm25').innerHTML = `${pm25}<span class="card-unit">μg</span>`;
+  document.getElementById('aqi-pm10').innerHTML = `${pm10}<span class="card-unit">μg</span>`;
+  document.getElementById('aqi-o3').innerHTML   = `${o3}<span class="card-unit">ppb</span>`;
+
+  const pm25v = parseFloat(pm25);
+  document.getElementById('aqi-pm25').style.color =
+    isNaN(pm25v)?'var(--w85)':pm25v<15?'var(--green)':pm25v<35?'var(--orange)':'var(--red)';
 }
 
 // ── ASSESSMENT ──
