@@ -350,8 +350,9 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 /* RESIZER */
 .resizer{
   width:16px; flex-shrink:0; cursor:col-resize;
-  background:transparent; position:relative; z-index:50;
+  background:transparent; position:relative; z-index:1000;
   transition:background .15s;
+  touch-action:none;
   display:none; /* hidden in portrait */
 }
 .resizer::after{
@@ -1662,17 +1663,27 @@ document.addEventListener('click', e=>{
 
   function getApp(){ return document.getElementById('app'); }
 
-  // Parse current grid cols → [w1, w2, w3] in px
-  function getCols(){
-    const cols = getComputedStyle(getApp()).gridTemplateColumns.split(' ');
-    // cols = [w1, '16px', w2, '16px', w3]
-    return [parseFloat(cols[0]), parseFloat(cols[2]), parseFloat(cols[4])];
-  }
-
+  let rafPending = false;
   function setCols(w1, w2, w3){
     getApp().style.gridTemplateColumns = `${w1}px ${RESIZER_W}px ${w2}px ${RESIZER_W}px ${w3}px`;
-    if(typeof map !== 'undefined' && map) map.invalidateSize();
     localStorage.setItem(STORAGE_KEY, JSON.stringify([w1, w2, w3]));
+    // throttle invalidateSize via rAF — prevents main-thread blocking during drag
+    if(!rafPending){
+      rafPending = true;
+      requestAnimationFrame(()=>{
+        if(typeof map !== 'undefined' && map) map.invalidateSize({animate:false});
+        rafPending = false;
+      });
+    }
+  }
+
+  // Parse current grid cols → [w1, w2, w3] in px
+  // Returns null if values are NaN (e.g. CSS uses 1fr — not yet resolved)
+  function getCols(){
+    const cols = getComputedStyle(getApp()).gridTemplateColumns.split(' ');
+    const vals = [parseFloat(cols[0]), parseFloat(cols[2]), parseFloat(cols[4])];
+    if(vals.some(isNaN)) return null;
+    return vals;
   }
 
   // Restore saved widths on load
@@ -1699,13 +1710,19 @@ document.addEventListener('click', e=>{
 
     let startX, startCols;
 
-    function onStart(clientX){
+    function onStart(clientX, pointerId){
       if(!isLandscape()) return;
+      const cols = getCols();
+      if(!cols) return; // NaN guard — layout not resolved yet
       startX = clientX;
-      startCols = getCols();
+      startCols = cols;
       el.classList.add('dragging');
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
+      // Pointer capture keeps events coming even if cursor leaves element
+      if(pointerId !== undefined){
+        try{ el.setPointerCapture(pointerId); }catch(e){}
+      }
     }
 
     function onMove(clientX){
@@ -1733,15 +1750,16 @@ document.addEventListener('click', e=>{
       document.body.style.userSelect = '';
     }
 
-    // Mouse
-    el.addEventListener('mousedown', e=>{ e.preventDefault(); onStart(e.clientX); });
-    document.addEventListener('mousemove', e=>{ if(startX!==undefined) onMove(e.clientX); });
-    document.addEventListener('mouseup', onEnd);
-
-    // Touch
-    el.addEventListener('touchstart', e=>{ e.preventDefault(); onStart(e.touches[0].clientX); }, {passive:false});
-    document.addEventListener('touchmove', e=>{ if(startX!==undefined){ e.preventDefault(); onMove(e.touches[0].clientX); } }, {passive:false});
-    document.addEventListener('touchend', onEnd);
+    // Unified Pointer Events (covers mouse + touch + stylus)
+    el.addEventListener('pointerdown', e=>{
+      e.preventDefault();
+      onStart(e.clientX, e.pointerId);
+    });
+    document.addEventListener('pointermove', e=>{
+      if(startX !== undefined) onMove(e.clientX);
+    });
+    document.addEventListener('pointerup', onEnd);
+    document.addEventListener('pointercancel', onEnd);
   }
 
   // Double-click resizer → reset to default
