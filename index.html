@@ -406,13 +406,12 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
       <div class="layer-row on" id="lr-county_yellow" onclick="toggleLayer('county_yellow',this)"><div class="layer-swatch" style="background:#ff9f0a;"></div><span>縣市黃區</span><div class="layer-toggle"></div></div>
       <div class="layer-row on" id="lr-park" onclick="toggleLayer('park',this)"><div class="layer-swatch" style="background:#888;"></div><span>國家公園</span><div class="layer-toggle"></div></div>
       <div class="layer-row on" id="lr-port" onclick="toggleLayer('port',this)"><div class="layer-swatch" style="background:#50a0ff;"></div><span>商港</span><div class="layer-toggle"></div></div>
-      <div class="layer-row on" id="lr-temporary" onclick="toggleLayer('temporary',this)"><div class="layer-swatch" style="background:#c084fc;"></div><span>臨時禁航</span><div class="layer-toggle"></div></div>
     </div>
 
     <div id="kml-section">
-      <div class="lp-title" style="margin-bottom:5px;">活動許可 KML</div>
+      <div class="lp-title" style="margin-bottom:5px;">作業 KML · 活動許可</div>
       <input type="file" id="kml-file-input" accept=".kml" multiple onchange="handleKmlFiles(this.files)">
-      <label for="kml-file-input" class="kml-upload-label">＋ 匯入民航局 KML</label>
+      <label for="kml-file-input" class="kml-upload-label">＋ 匯入 KML（可多選）</label>
       <div id="kml-layers"></div>
     </div>
 
@@ -496,6 +495,11 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
     </div>
 
     <div class="sec">
+      <div class="sec-title">Assessment · 飛行評估</div>
+      <div id="assess-list"></div>
+    </div>
+
+    <div class="sec">
       <div class="sec-title">Tide · 潮汐估算</div>
       <div class="card-grid" id="tide-grid">
         <div class="card"><div class="tide-type">滿潮</div><div class="tide-time" id="ht1">--:--</div><div class="tide-h" id="ht1h">--cm</div></div>
@@ -531,43 +535,17 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
     </div>
 
     <div class="sec">
-      <div class="sec-title">NOTAM</div>
+      <div class="sec-title">本日作業 · NOTAM</div>
       <div class="notam-input-row">
-        <input type="text" id="notam-input" placeholder="輸入編號，例如 A0817/26" maxlength="20" onkeydown="if(event.key==='Enter')addNotam()">
-        <button id="notam-add" onclick="addNotam()">+ 加入</button>
+        <input type="text" id="notam-input" placeholder="編號 U0857" maxlength="20"
+               style="width:90px;flex:none;"
+               onkeydown="if(event.key==='Enter')document.getElementById('notam-loc').focus()">
+        <input type="text" id="notam-loc" placeholder="地點，例如 西屯區" maxlength="30"
+               style="flex:1;"
+               onkeydown="if(event.key==='Enter')addNotam()">
+        <button id="notam-add" onclick="addNotam()">＋</button>
       </div>
       <div id="notam-list"></div>
-    </div>
-
-    <div class="sec" id="radar-sec">
-      <div class="sec-title">Radar · 雷達回波</div>
-      <div id="radar-card" style="background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);overflow:hidden;">
-        <!-- 預覽圖 -->
-        <div style="position:relative;width:100%;aspect-ratio:1.4/1;background:#0a0f14;overflow:hidden;">
-          <img id="radar-img" src="" alt="雷達回波"
-            style="width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .5s;">
-          <div id="radar-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--w30);letter-spacing:.08em;">載入中…</div>
-          <div id="radar-ts" style="position:absolute;bottom:5px;right:7px;font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.45);letter-spacing:.05em;"></div>
-          <!-- 地圖疊層：僅示意台灣位置 -->
-          <div style="position:absolute;top:5px;left:7px;font-size:8px;color:rgba(96,212,240,0.7);letter-spacing:.06em;">中央氣象署整合回波</div>
-        </div>
-        <!-- 控制列 -->
-        <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:0.5px solid var(--border);">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:9px;color:var(--w55);letter-spacing:.06em;">地圖疊加顯示</div>
-            <div id="radar-map-status" style="font-size:8px;color:var(--w30);margin-top:1px;">已關閉</div>
-          </div>
-          <div id="radar-map-toggle" onclick="toggleRadarOverlay()"
-            style="width:36px;height:20px;border-radius:10px;background:var(--w30);position:relative;cursor:pointer;flex-shrink:0;transition:background .15s;">
-            <div id="radar-map-knob" style="position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s;"></div>
-          </div>
-          <button onclick="refreshRadarPanel()" title="重新整理"
-            style="background:transparent;border:0.5px solid var(--border);border-radius:5px;color:var(--w55);font-size:11px;padding:3px 7px;cursor:pointer;flex-shrink:0;transition:all .12s;"
-            onmouseover="this.style.borderColor='var(--accent-bd)';this.style.color='var(--accent)'"
-            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--w55)'">↻</button>
-        </div>
-      </div>
-      <div class="disc" style="padding:4px 0 0;">每 10 分鐘自動更新 · 來源：中央氣象署</div>
     </div>
 
     <div class="sec">
@@ -603,11 +581,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
           <div class="card-val" id="aqi-o3" style="font-size:14px;color:var(--w85);">--<span class="card-unit">ppb</span></div>
         </div>
       </div>
-    </div>
-
-    <div class="sec">
-      <div class="sec-title">Assessment · 飛行評估</div>
-      <div id="assess-list"></div>
     </div>
 
     <div class="disc">資料來源：open-meteo · SunCalc · 民航局 GeoJSON<br>分高度風速為估算值，飛行前請以官方資料為準<br><span style="color:var(--w30);letter-spacing:.08em;">AERIAL DASHBOARD BY 里卡豆 · 仟隅視覺有限公司</span></div>
@@ -705,7 +678,6 @@ function initMap(){
       .bindPopup(`<b style="color:#ff6f60">${ap.code}</b><br>${ap.name}<br>GOSO: ${ap.goso} km`);
   });
 
-  initRadar();
 
   // ── Locate Control（定位按鈕，放在 +/- 下方）──
   const LocateControl = L.Control.extend({
@@ -813,86 +785,6 @@ function loadNFZ(){
 
 // 台灣全島範圍 bounds（雷達圖對應的經緯度範圍）
 // 按 Shift+R 可打開即時校準工具
-let RADAR_BOUNDS = (()=>{
-  try{
-    const s = JSON.parse(localStorage.getItem('ka_radar_bounds'));
-    if(s && s.length===2) return s;
-  }catch(e){}
-  return [[20.0, 118.0], [26.5, 123.5]];
-})();
-let radarLayer = null;
-let radarTimer = null;
-
-function initRadar(){
-  loadRadar();
-}
-
-// 追蹤地圖疊層是否開啟（預設關閉，panel 只顯示圖片）
-let radarOverlayOn = false;
-
-function loadRadar(){
-  const WORKER = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
-  const url = `${WORKER}?type=radar&_t=${Date.now()}`;
-
-  // 更新 panel 預覽圖
-  const img = document.getElementById('radar-img');
-  const loading = document.getElementById('radar-loading');
-  const ts = document.getElementById('radar-ts');
-  if(img){
-    const tmp = new Image();
-    tmp.onload = ()=>{
-      img.src = tmp.src;
-      img.style.opacity = '1';
-      if(loading) loading.style.display = 'none';
-      const now = new Date();
-      if(ts) ts.textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 更新`;
-    };
-    tmp.onerror = ()=>{ if(loading) loading.textContent = '載入失敗'; };
-    tmp.src = url;
-  }
-
-  // 地圖疊層（只有開啟時才更新）
-  if(radarOverlayOn){
-    if(radarLayer) map.removeLayer(radarLayer);
-    radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity: 0.75, zIndex: 400, interactive: false});
-    radarLayer.addTo(map);
-  }
-}
-
-function refreshRadarPanel(){
-  const loading = document.getElementById('radar-loading');
-  const img = document.getElementById('radar-img');
-  if(loading){ loading.style.display='flex'; loading.textContent='載入中…'; }
-  if(img) img.style.opacity='0';
-  loadRadar();
-}
-
-function toggleRadarOverlay(){
-  radarOverlayOn = !radarOverlayOn;
-  const toggle = document.getElementById('radar-map-toggle');
-  const knob   = document.getElementById('radar-map-knob');
-  const status = document.getElementById('radar-map-status');
-
-  if(radarOverlayOn){
-    if(toggle) toggle.style.background = 'var(--accent)';
-    if(knob)   knob.style.left = '19px';
-    if(status) status.textContent = '疊加中';
-    // 立即載入到地圖
-    const WORKER = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
-    const url = `${WORKER}?type=radar&_t=${Date.now()}`;
-    if(radarLayer) map.removeLayer(radarLayer);
-    radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity:0.75, zIndex:400, interactive:false});
-    radarLayer.addTo(map);
-    if(!radarTimer) radarTimer = setInterval(loadRadar, 10*60*1000);
-  } else {
-    if(toggle) toggle.style.background = 'var(--w30)';
-    if(knob)   knob.style.left = '3px';
-    if(status) status.textContent = '已關閉';
-    if(radarLayer){ map.removeLayer(radarLayer); radarLayer=null; }
-    if(radarTimer){ clearInterval(radarTimer); radarTimer=null; }
-  }
-}
-
 function toggleLayer(name, el){
   el.classList.toggle('on');
   const on = el.classList.contains('on');
@@ -1413,16 +1305,29 @@ function updateAssessment(ws,wg,vis,cloud){
 function saveNotams(){localStorage.setItem('ka_notams',JSON.stringify(notams));}
 function addNotam(){
   const inp=document.getElementById('notam-input');
+  const locInp=document.getElementById('notam-loc');
   const code=inp.value.trim().toUpperCase();
+  const loc=locInp ? locInp.value.trim() : '';
   if(!code||notams.find(n=>n.code===code)){inp.value='';return;}
-  notams.push({code,time:new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})});
-  saveNotams(); renderNotams(); inp.value='';
+  notams.push({
+    code,
+    loc,
+    time:new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})
+  });
+  saveNotams(); renderNotams(); inp.value=''; if(locInp) locInp.value='';
 }
 function removeNotam(code){notams=notams.filter(n=>n.code!==code);saveNotams();renderNotams();}
 function renderNotams(){
   const el=document.getElementById('notam-list');
-  if(!notams.length){el.innerHTML=`<div style="font-size:9px;color:var(--w30);padding:3px 0;">尚未加入 NOTAM</div>`;return;}
-  el.innerHTML=notams.map(n=>`<div class="notam-item"><div class="n-code">${n.code}</div><div class="n-info">手動輸入<br><span style="color:var(--w30);">${n.time}</span></div><div class="n-del" onclick="removeNotam('${n.code}')">✕</div></div>`).join('');
+  if(!notams.length){el.innerHTML=`<div style="font-size:9px;color:var(--w30);padding:3px 0;">尚未加入作業 NOTAM</div>`;return;}
+  el.innerHTML=notams.map(n=>`
+    <div class="notam-item">
+      <div class="n-code">${n.code}</div>
+      <div class="n-info">${n.loc?`<span style="color:var(--w85);">${n.loc}</span><br>`:''}
+        <span style="color:var(--w30);">${n.time}</span>
+      </div>
+      <div class="n-del" onclick="removeNotam('${n.code}')">✕</div>
+    </div>`).join('');
 }
 
 const GMAP_KEY = 'AIzaSyC6FIbAT7mT9sUY3W8H4VwMtQfGXURzu00';
@@ -1645,108 +1550,6 @@ function initTheme(){
   }
 }
 
-// ── RADAR BOUNDS 校準工具（Shift+R 呼出）──
-(function(){
-  const PANEL_ID = 'radar-calib-panel';
-
-  function buildPanel(){
-    if(document.getElementById(PANEL_ID)) return;
-    const b = RADAR_BOUNDS;
-    // [S, W], [N, E]
-    let S=b[0][0], W=b[0][1], N=b[1][0], E=b[1][1];
-
-    const panel = document.createElement('div');
-    panel.id = PANEL_ID;
-    panel.style.cssText = `
-      position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-      z-index:9999;background:rgba(20,18,16,0.97);border:0.5px solid rgba(184,150,90,0.5);
-      border-radius:12px;padding:14px 18px;min-width:320px;
-      font-family:'DM Sans',sans-serif;font-size:11px;color:#fff;
-      box-shadow:0 8px 32px rgba(0,0,0,0.6);
-    `;
-
-    function row(label, val, min, max, step, id){
-      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <span style="width:70px;color:rgba(255,255,255,0.55);font-size:10px;">${label}</span>
-        <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"
-          style="flex:1;accent-color:#b8965a;">
-        <span id="${id}_v" style="width:52px;text-align:right;font-family:monospace;font-size:10px;color:#b8965a;">${val}</span>
-      </div>`;
-    }
-
-    panel.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <span style="font-size:10px;letter-spacing:.12em;color:#b8965a;text-transform:uppercase;">雷達 Bounds 校準</span>
-        <span onclick="document.getElementById('${PANEL_ID}').remove()" style="cursor:pointer;color:rgba(255,255,255,0.4);font-size:14px;">✕</span>
-      </div>
-      ${row('南界 S lat', S, 17, 24, 0.05, 'rc_s')}
-      ${row('北界 N lat', N, 23, 30, 0.05, 'rc_n')}
-      ${row('西界 W lng', W, 115, 121, 0.05, 'rc_w')}
-      ${row('東界 E lng', E, 120, 127, 0.05, 'rc_e')}
-      <div style="display:flex;gap:6px;margin-top:10px;">
-        <button id="rc_apply" style="flex:1;background:#b8965a;border:none;border-radius:6px;color:#000;font-size:11px;font-weight:700;padding:6px;cursor:pointer;">套用到地圖</button>
-        <button id="rc_save" style="flex:1;background:transparent;border:0.5px solid rgba(184,150,90,0.5);border-radius:6px;color:#b8965a;font-size:11px;padding:6px;cursor:pointer;">儲存設定</button>
-        <button id="rc_reset" style="background:transparent;border:0.5px solid rgba(255,255,255,0.15);border-radius:6px;color:rgba(255,255,255,0.4);font-size:11px;padding:6px 10px;cursor:pointer;">重設</button>
-      </div>
-      <div style="margin-top:7px;font-size:9px;color:rgba(255,255,255,0.3);">Shift+R 開關 · 目前: S<span id="rc_cur"></span></div>
-    `;
-    document.body.appendChild(panel);
-
-    const ids = ['rc_s','rc_n','rc_w','rc_e'];
-    ids.forEach(id=>{
-      const el = document.getElementById(id);
-      el.addEventListener('input',()=>{
-        document.getElementById(id+'_v').textContent = parseFloat(el.value).toFixed(2);
-      });
-    });
-
-    function getVals(){
-      return [
-        [parseFloat(document.getElementById('rc_s').value), parseFloat(document.getElementById('rc_w').value)],
-        [parseFloat(document.getElementById('rc_n').value), parseFloat(document.getElementById('rc_e').value)]
-      ];
-    }
-
-    function updateCur(){
-      const v = getVals();
-      document.getElementById('rc_cur').textContent =
-        ` ${v[0][0].toFixed(2)}  N ${v[1][0].toFixed(2)}  W ${v[0][1].toFixed(2)}  E ${v[1][1].toFixed(2)}`;
-    }
-    ids.forEach(id=> document.getElementById(id).addEventListener('input', updateCur));
-    updateCur();
-
-    document.getElementById('rc_apply').onclick = ()=>{
-      RADAR_BOUNDS = getVals();
-      if(radarLayer && radarOverlayOn){
-        const WORKER = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
-        const url = `${WORKER}?type=radar&_t=${Date.now()}`;
-        map.removeLayer(radarLayer);
-        radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity:0.75,zIndex:400,interactive:false}).addTo(map);
-      }
-    };
-
-    document.getElementById('rc_save').onclick = ()=>{
-      RADAR_BOUNDS = getVals();
-      localStorage.setItem('ka_radar_bounds', JSON.stringify(RADAR_BOUNDS));
-      document.getElementById('rc_save').textContent = '✓ 已儲存';
-      setTimeout(()=>{ document.getElementById('rc_save').textContent = '儲存設定'; }, 1500);
-    };
-
-    document.getElementById('rc_reset').onclick = ()=>{
-      localStorage.removeItem('ka_radar_bounds');
-      RADAR_BOUNDS = [[20.0, 118.0], [26.5, 123.5]];
-      document.getElementById(PANEL_ID).remove();
-      buildPanel();
-    };
-  }
-
-  document.addEventListener('keydown', e=>{
-    if(e.key === 'R' && e.shiftKey){
-      const existing = document.getElementById(PANEL_ID);
-      if(existing) existing.remove(); else buildPanel();
-    }
-  });
-})();
 
 // ── INIT ──
 window.addEventListener('load',()=>{
