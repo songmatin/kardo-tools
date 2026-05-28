@@ -392,6 +392,7 @@ body{font-family:var(--sans);color:#fff;}
 
     <div id="layer-panel">
       <div class="lp-title">空域圖層</div>
+      <div class="layer-row" id="lr-radar" onclick="toggleLayer('radar',this)"><div class="layer-swatch" style="background:#60d4f0;"></div><span>雷達回波</span><div class="layer-toggle"></div></div>
       <div class="layer-row on" id="lr-county_red" onclick="toggleLayer('county_red',this)"><div class="layer-swatch" style="background:#ff4f41;"></div><span>縣市紅區</span><div class="layer-toggle"></div></div>
       <div class="layer-row on" id="lr-county_yellow" onclick="toggleLayer('county_yellow',this)"><div class="layer-swatch" style="background:#ff9f0a;"></div><span>縣市黃區</span><div class="layer-toggle"></div></div>
       <div class="layer-row on" id="lr-park" onclick="toggleLayer('park',this)"><div class="layer-swatch" style="background:#888;"></div><span>國家公園</span><div class="layer-toggle"></div></div>
@@ -666,6 +667,8 @@ function initMap(){
       .addTo(map)
       .bindPopup(`<b style="color:#ff6f60">${ap.code}</b><br>${ap.name}<br>GOSO: ${ap.goso} km`);
   });
+
+  initRadar();
 }
 
 // ── LOAD NFZ GEOJSON (from kardo-tools repo) ──
@@ -751,9 +754,43 @@ function loadNFZ(){
   }).catch(()=>{});
 }
 
-function toggleLayer(name,el){
+// 台灣全島範圍 bounds（雷達圖對應的經緯度範圍）
+const RADAR_BOUNDS = [[20.0, 118.0], [26.5, 123.5]];
+let radarLayer = null;
+let radarTimer = null;
+
+function initRadar(){
+  // 雷達回波：用氣象署整合回波 PNG，每10分鐘更新
+  loadRadar();
+}
+
+function loadRadar(){
+  const ts = Math.floor(Date.now() / (10*60*1000)) * (10*60*1000); // 10分鐘 cache buster
+  const url = `https://opendata.cwa.gov.tw/fileapi/v1/opendataapi/O-A0058-003?Authorization=${CWA_KEY}&downloadType=WEB&format=PNG&_t=${ts}`;
+  if(radarLayer) map.removeLayer(radarLayer);
+  radarLayer = L.imageOverlay(url, RADAR_BOUNDS, {opacity: 0.6, zIndex: 400});
+  // 只有開關打開才顯示
+  const btn = document.getElementById('lr-radar');
+  if(btn && btn.classList.contains('on')) radarLayer.addTo(map);
+}
+
+function toggleLayer(name, el){
   el.classList.toggle('on');
-  const on=el.classList.contains('on');
+  const on = el.classList.contains('on');
+
+  if(name === 'radar'){
+    if(on){
+      if(!radarLayer) loadRadar();
+      else radarLayer.addTo(map);
+      // 每10分鐘自動刷新
+      radarTimer = setInterval(loadRadar, 10*60*1000);
+    } else {
+      if(radarLayer) map.removeLayer(radarLayer);
+      if(radarTimer){ clearInterval(radarTimer); radarTimer=null; }
+    }
+    return;
+  }
+
   if(nfzLayers[name]){
     if(on) nfzLayers[name].addTo(map); else map.removeLayer(nfzLayers[name]);
   }
