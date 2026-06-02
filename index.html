@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -46,7 +47,6 @@ body.light .sec{ background:rgba(255,255,255,0.5); }
 body.light .card{ backdrop-filter:blur(12px); background:rgba(255,255,255,0.8); }
 body.light .leaflet-tile{ filter:brightness(1.05) saturate(0.9); }
 
-/* Theme toggle btn */
 #theme-btn{
   background:transparent; border:0.5px solid var(--border);
   border-radius:20px; color:var(--w55); font-size:13px;
@@ -57,13 +57,11 @@ body.light .leaflet-tile{ filter:brightness(1.05) saturate(0.9); }
 html,body{height:100%;overflow:hidden;background:var(--dark);-webkit-font-smoothing:antialiased;}
 body{font-family:var(--sans);color:#fff;}
 
-/* BG */
 #bg{position:fixed;inset:0;z-index:0;
   background:url('https://static.wixstatic.com/media/8d236f_563587e32c3d43cda38606d3b57fe249~mv2.jpg') center/cover no-repeat;
   filter:brightness(0.25) saturate(0.5);}
 #bgo{position:fixed;inset:0;z-index:1;background:linear-gradient(180deg,rgba(26,25,23,0.7) 0%,rgba(26,25,23,0.3) 40%,rgba(26,25,23,0.85) 100%);}
 
-/* TOPBAR */
 #topbar{
   position:fixed;top:0;left:0;right:0;z-index:300;
   height:calc(var(--topbar) + var(--safe-t));
@@ -83,16 +81,12 @@ body{font-family:var(--sans);color:#fff;}
 .dot.a{background:var(--orange);box-shadow:0 0 5px var(--orange);}
 .dot.r{background:var(--red);box-shadow:0 0 5px var(--red);}
 
-/* MAIN WRAPPER */
 #app{
   position:fixed;inset:0;z-index:10;
   padding-top:calc(var(--topbar) + var(--safe-t));
   padding-bottom:var(--safe-b);
 }
 
-/* ══════════════════════════════════
-   LANDSCAPE — 3-column grid + resizers
-══════════════════════════════════ */
 @media (orientation:landscape){
   #app{display:grid;grid-template-columns:280px 5px 1fr 5px 260px;grid-template-rows:100%;}
   #col-map{grid-column:1;grid-row:1;display:flex;flex-direction:column;overflow:hidden;}
@@ -105,36 +99,29 @@ body{font-family:var(--sans);color:#fff;}
   #map{flex:1;min-height:0;}
 }
 
-/* ══════════════════════════════════
-   PORTRAIT — stacked layout, map centered square
-══════════════════════════════════ */
 @media (orientation:portrait){
   #app{display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;}
   #app::-webkit-scrollbar{display:none;}
   #col-map{display:flex;flex-direction:column;align-items:center;padding:12px 0;flex-shrink:0;}
   #map{
-    width:92vw;height:92vw;max-width:480px;max-height:480px; /* square */
+    width:92vw;height:92vw;max-width:480px;max-height:480px;
     border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border);
     align-self:center;
   }
   #layer-panel{width:92vw;max-width:480px;align-self:center;}
   #kml-section{width:92vw;max-width:480px;align-self:center;}
-
   #col-mid{border-top:0.5px solid var(--border);}
   #col-right{border-top:0.5px solid var(--border);}
 }
 
-/* MAP (landscape) */
 @media (orientation:landscape){
   #map{border-bottom:0.5px solid var(--border);}
 }
 
-/* Leaflet popup */
 .leaflet-popup-content-wrapper{background:rgba(26,25,23,0.97)!important;border:0.5px solid rgba(255,255,255,0.12)!important;border-radius:10px!important;color:white!important;box-shadow:0 8px 32px rgba(0,0,0,0.5)!important;}
 .leaflet-popup-tip{background:rgba(26,25,23,0.97)!important;}
 .leaflet-popup-close-button{color:rgba(255,255,255,0.4)!important;}
 
-/* LAYER PANEL */
 #layer-panel{padding:8px 10px;background:rgba(20,18,16,0.6);backdrop-filter:blur(12px);flex-shrink:0;}
 .lp-title{font-size:8px;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:5px;}
 .layer-row{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--w55);cursor:pointer;padding:4px 5px;border-radius:6px;border:0.5px solid transparent;transition:all .12s;user-select:none;}
@@ -146,7 +133,6 @@ body{font-family:var(--sans);color:#fff;}
 .layer-row.on .layer-toggle{background:var(--accent);}
 .layer-row.on .layer-toggle::after{left:13px;}
 
-/* KML section */
 #kml-section{padding:8px 10px;border-top:0.5px solid var(--border);background:rgba(20,18,16,0.6);backdrop-filter:blur(12px);flex-shrink:0;}
 .kml-upload-label{display:block;width:100%;background:transparent;border:0.5px dashed rgba(184,150,90,0.4);border-radius:6px;color:var(--accent);font-size:10px;padding:5px;cursor:pointer;letter-spacing:.06em;transition:all .12s;text-align:center;}
 .kml-upload-label:hover{background:var(--accent-bg);}
@@ -166,7 +152,78 @@ body{font-family:var(--sans);color:#fff;}
 .kml-del{font-size:12px;color:var(--w30);cursor:pointer;flex-shrink:0;padding:0 2px;}
 .kml-del:hover{color:var(--red);}
 
-/* LOCATE MAP CONTROL BTN */
+/* ── CAA PDF IMPORT ── */
+.caa-upload-label{
+  display:block;width:100%;background:transparent;
+  border:0.5px dashed rgba(80,160,255,0.4);
+  border-radius:6px;color:var(--blue);font-size:10px;
+  padding:5px;cursor:pointer;letter-spacing:.06em;
+  transition:all .12s;text-align:center;margin-top:6px;
+}
+.caa-upload-label:hover{background:rgba(80,160,255,0.08);}
+#caa-file-input{display:none;}
+
+.caa-status{
+  font-size:9px;padding:4px 8px;border-radius:5px;
+  margin-top:5px;display:none;text-align:center;
+  font-family:var(--mono);letter-spacing:.03em;
+}
+.caa-status.ok{background:rgba(50,210,100,.1);color:var(--green);border:0.5px solid rgba(50,210,100,.2);}
+.caa-status.err{background:rgba(255,79,65,.1);color:var(--red);border:0.5px solid rgba(255,79,65,.2);}
+.caa-status.loading{background:rgba(80,160,255,.08);color:var(--blue);border:0.5px solid rgba(80,160,255,.2);}
+.caa-status.show{display:block;}
+
+#caa-permit-card{
+  margin-top:7px;
+  background:rgba(80,160,255,0.06);
+  border:0.5px solid rgba(80,160,255,0.22);
+  border-radius:8px;padding:8px 10px;
+  display:none;
+  animation:caaFadeIn .2s ease;
+}
+@keyframes caaFadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+
+.caa-app-no{font-size:8px;color:var(--blue);font-family:var(--mono);letter-spacing:.07em;margin-bottom:3px;opacity:.7;}
+.caa-permit-name{font-size:10px;color:var(--w85);font-weight:600;line-height:1.4;margin-bottom:5px;}
+.caa-meta-row{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--w55);margin-bottom:2px;}
+.caa-meta-val{color:var(--w85);font-family:var(--mono);font-size:9px;}
+
+.caa-divider{height:0.5px;background:rgba(80,160,255,0.15);margin:6px 0;}
+
+.caa-zones-lbl{font-size:8px;color:var(--w30);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
+.caa-zone-list{display:flex;flex-direction:column;gap:3px;}
+.caa-zone-row{
+  display:flex;align-items:center;gap:5px;
+  padding:4px 6px;border-radius:5px;cursor:pointer;
+  background:var(--w06);border:0.5px solid var(--border2);
+  transition:all .12s;user-select:none;
+}
+.caa-zone-row:hover{border-color:rgba(80,160,255,0.3);}
+.caa-zone-row.on{border-color:rgba(80,160,255,0.35);background:rgba(80,160,255,0.09);}
+.caa-check{
+  width:13px;height:13px;border-radius:3px;
+  border:0.5px solid var(--w30);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .12s;
+}
+.caa-zone-row.on .caa-check{background:var(--blue);border-color:var(--blue);}
+.caa-check svg{opacity:0;transition:opacity .1s;}
+.caa-zone-row.on .caa-check svg{opacity:1;}
+.caa-zone-swatch{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.caa-zone-info{flex:1;min-width:0;}
+.caa-zone-name{font-size:10px;color:var(--w85);font-weight:500;}
+.caa-zone-detail{font-size:8px;color:var(--w55);font-family:var(--mono);margin-top:1px;}
+.caa-zone-alt{font-size:8px;color:var(--orange);font-family:var(--mono);flex-shrink:0;}
+
+.caa-actions{display:flex;gap:4px;margin-top:6px;}
+.caa-action-btn{
+  flex:1;padding:4px 5px;font-size:9px;border-radius:5px;
+  cursor:pointer;letter-spacing:.05em;transition:all .12s;text-align:center;
+  background:transparent;border:0.5px solid var(--border);color:var(--w55);
+}
+.caa-action-btn:hover{border-color:var(--accent-bd);color:var(--accent);}
+.caa-action-btn.danger:hover{border-color:rgba(255,79,65,.4);color:var(--red);}
+
 .leaflet-control-locate a{
   width:26px!important;height:26px!important;
   display:flex!important;align-items:center;justify-content:center;
@@ -181,7 +238,6 @@ body{font-family:var(--sans);color:#fff;}
 body.light .leaflet-control-locate a{background:rgba(245,242,237,0.95)!important;color:var(--accent)!important;}
 body.light .leaflet-control-locate a:hover{background:var(--accent)!important;color:#fff!important;}
 
-/* SEARCH */
 #search-wrap{padding:0 10px 8px;flex-shrink:0;position:relative;}
 #search-input{width:100%;background:var(--card);border:0.5px solid var(--border);border-radius:6px;color:#fff;font-size:11px;padding:6px 30px 6px 10px;outline:none;letter-spacing:.03em;}
 #search-input:focus{border-color:var(--accent-bd);}
@@ -194,19 +250,16 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 .search-item:hover{background:var(--accent-bg);}
 .search-item-sub{font-size:9px;color:var(--w55);margin-top:1px;}
 
-/* SECTION */
 .sec{padding:12px 14px;border-bottom:0.5px solid var(--border);background:rgba(26,25,23,0.4);}
 .sec-title{font-size:8px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:6px;}
 .sec-title::after{content:'';flex:1;height:0.5px;background:var(--border);}
 
-/* CARDS */
 .card-grid{display:grid;gap:6px;}
 .card{background:var(--card);backdrop-filter:blur(16px);border:0.5px solid var(--border);border-radius:var(--r-sm);padding:9px 11px;}
 .card-label{font-size:8px;color:var(--w55);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
 .card-val{font-family:var(--mono);font-size:16px;font-weight:700;line-height:1;}
 .card-unit{font-size:9px;color:var(--w55);margin-left:2px;font-family:inherit;}
 
-/* SUN */
 #sun-row1{grid-template-columns:1fr 1fr;}
 #sun-row2{grid-template-columns:1fr 1fr;margin-top:6px;}
 #shadow-wrap{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;margin-top:6px;}
@@ -219,7 +272,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 #sun-alt-row{margin-top:5px;font-size:9px;color:var(--w55);}
 #sun-alt-val{color:var(--accent);font-family:var(--mono);}
 
-/* WIND */
 #wind-row1{grid-template-columns:1fr 1fr 52px;}
 .compass-box{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;height:52px;}
 #beaufort-wrap{margin-top:6px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);padding:7px 10px;display:flex;align-items:center;gap:9px;}
@@ -228,7 +280,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 #bf-desc{font-size:11px;color:var(--w70);margin-top:1px;}
 #bf-go{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 9px;border-radius:4px;border:0.5px solid;flex-shrink:0;}
 
-/* MULTI-ALT WIND */
 #wind-alt-wrap{margin-top:6px;}
 .wind-alt-title{font-size:8px;color:var(--w55);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
 .wind-row{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
@@ -239,7 +290,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 .wind-ref-lbl{position:absolute;top:-12px;transform:translateX(-50%);font-size:7px;color:var(--w30);white-space:nowrap;}
 .wind-v{font-size:10px;width:36px;text-align:right;flex-shrink:0;font-family:var(--mono);}
 
-/* DRONE LIMIT TABLE */
 .drone-table{width:100%;margin-top:6px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);overflow:hidden;}
 .drone-row{display:grid;grid-template-columns:1fr auto auto;gap:0;padding:7px 10px;border-bottom:0.5px solid var(--border2);}
 .drone-row:last-child{border-bottom:none;}
@@ -251,13 +301,11 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 .drone-hd{background:var(--w06);padding:5px 10px;display:grid;grid-template-columns:1fr auto auto;font-size:8px;color:var(--w30);letter-spacing:.08em;text-transform:uppercase;}
 .drone-hd-r{text-align:center;padding-left:10px;}
 
-/* TIDE */
 #tide-grid{grid-template-columns:1fr 1fr 1fr;}
 .tide-type{font-size:8px;color:var(--w55);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;}
 .tide-time{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--blue);}
 .tide-h{font-size:9px;color:var(--w55);margin-top:1px;}
 
-/* AIRPORT */
 #ap-tabs{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px;}
 .ap-tab{font-family:var(--mono);font-size:9px;letter-spacing:.07em;padding:3px 8px;border-radius:4px;cursor:pointer;background:var(--w06);border:0.5px solid var(--border);color:var(--w55);transition:all .12s;}
 .ap-tab.active{background:rgba(255,79,65,.15);border-color:rgba(255,79,65,.4);color:var(--red);}
@@ -268,7 +316,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 .ap-info-label{color:var(--w55);letter-spacing:.08em;text-transform:uppercase;margin-bottom:1px;}
 .ap-info-val{font-family:var(--mono);color:var(--orange);font-size:11px;font-weight:700;}
 
-/* NOTAM */
 .notam-input-row{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:4px;margin-bottom:7px;}
 #notam-input{grid-column:1;grid-row:1;width:100%;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);color:#fff;font-family:var(--mono);font-size:11px;padding:6px 10px;letter-spacing:.07em;outline:none;text-transform:uppercase;box-sizing:border-box;}
 #notam-input:focus{border-color:var(--accent-bd);}
@@ -285,16 +332,13 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 .n-del{cursor:pointer;color:var(--w30);font-size:13px;flex-shrink:0;}
 .n-del:hover{color:var(--red);}
 
-/* ASSESS */
 #assess-list{display:flex;flex-direction:column;gap:4px;}
 .assess-item{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);padding:6px 10px;display:flex;align-items:center;gap:7px;font-size:10px;}
 .assess-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .assess-label{color:var(--w55);flex:1;}
 .assess-val{font-family:var(--mono);font-size:10px;}
 
-/* WEATHER */
 #wx-grid{grid-template-columns:1fr 1fr;}
-/* 逐時預報 */
 #wx-hourly-wrap::-webkit-scrollbar{display:none;}
 .wx-hour{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 6px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);min-width:46px;flex-shrink:0;}
 .wx-hour.now{border-color:var(--accent-bd);background:var(--accent-bg);}
@@ -303,11 +347,7 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 .wx-hour-temp{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--w85);}
 .wx-hour-wind{font-size:8px;color:var(--w30);font-family:var(--mono);}
 
-/* FLIGHT */
-#flight-status-bar{
-  background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);
-  padding:9px 11px;margin-bottom:6px;
-}
+#flight-status-bar{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);padding:9px 11px;margin-bottom:6px;}
 .flt-status-row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px;}
 .flt-countdown{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1;}
 .flt-countdown-unit{font-size:11px;font-weight:400;color:var(--w55);margin-left:3px;}
@@ -336,15 +376,13 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 .flt-refresh-btn:hover{border-color:var(--accent-bd);color:var(--accent);}
 .flt-refresh-btn:disabled{opacity:.4;pointer-events:none;}
 
-/* DISCLAIMER */
 .disc{font-size:9px;color:var(--w30);text-align:center;padding:8px 14px;line-height:1.6;}
 
-/* RESIZER */
 .resizer{
   width:5px; flex-shrink:0; cursor:col-resize;
   background:transparent; position:relative; z-index:50;
   transition:background .15s;
-  display:none; /* hidden in portrait */
+  display:none;
 }
 .resizer::after{
   content:''; position:absolute; top:50%; left:50%;
@@ -360,10 +398,8 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
   .resizer{ display:block; }
 }
 
-/* CREDIT */
 @media (orientation:landscape){ #credit-label{ display:block !important; } }
 
-/* LOADER */
 #loader{position:fixed;inset:0;background:var(--dark);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s;}
 #loader.gone{opacity:0;pointer-events:none;}
 .ld-brand{font-family:var(--mono);font-size:11px;letter-spacing:.25em;color:var(--accent);margin-bottom:20px;text-transform:uppercase;}
@@ -382,7 +418,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
   <div class="ld-status" id="ld-status">初始化...</div>
 </div>
 
-<!-- TOPBAR -->
 <div id="topbar">
   <div class="brand-logo">
     <svg viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
@@ -404,10 +439,8 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
   <div style="font-size:8px;color:var(--w30);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0;display:none;" id="credit-label">AERIAL DASHBOARD · 里卡豆</div>
 </div>
 
-<!-- APP -->
 <div id="app">
 
-  <!-- COL MAP -->
   <div id="col-map">
     <div id="map"></div>
 
@@ -421,9 +454,37 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 
     <div id="kml-section">
       <div class="lp-title" style="margin-bottom:5px;">作業 KML · 活動許可</div>
+
+      <!-- KML -->
       <input type="file" id="kml-file-input" accept=".kml" multiple onchange="handleKmlFiles(this.files)">
       <label for="kml-file-input" class="kml-upload-label">＋ 匯入 KML（可多選）</label>
       <div id="kml-layers"></div>
+
+      <!-- CAA PDF -->
+      <input type="file" id="caa-file-input" accept="application/pdf">
+      <label for="caa-file-input" class="caa-upload-label" id="caa-upload-label">📄 匯入活動計劃書 PDF</label>
+      <div class="caa-status" id="caa-status"></div>
+
+      <div id="caa-permit-card">
+        <div class="caa-app-no" id="caa-app-no"></div>
+        <div class="caa-permit-name" id="caa-permit-name">—</div>
+        <div class="caa-meta-row">
+          <span style="color:var(--blue);font-size:10px;">📅</span>
+          <span style="color:var(--w55);font-size:9px;">同意期限</span>
+          <span class="caa-meta-val" id="caa-permit-date">—</span>
+        </div>
+        <div class="caa-meta-row">
+          <span style="color:var(--blue);font-size:10px;">🏢</span>
+          <span class="caa-meta-val" id="caa-permit-unit">—</span>
+        </div>
+        <div class="caa-divider"></div>
+        <div class="caa-zones-lbl">空域圖層</div>
+        <div class="caa-zone-list" id="caa-zone-list"></div>
+        <div class="caa-actions">
+          <div class="caa-action-btn" onclick="fitCaaZones()">⊡ 縮放至空域</div>
+          <div class="caa-action-btn danger" onclick="clearCaaPermit()">✕ 清除</div>
+        </div>
+      </div>
     </div>
 
     <div id="search-wrap">
@@ -434,12 +495,9 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
     </div>
   </div>
 
-  <!-- RESIZER 1 -->
   <div class="resizer" id="resizer-1"></div>
 
-  <!-- COL MID: SUN / WIND / TIDE -->
   <div id="col-mid">
-
     <div class="sec">
       <div class="sec-title">Sun · 日照</div>
       <div class="card-grid" id="sun-row1">
@@ -491,8 +549,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
         <div><div id="bf-lbl">Beaufort Scale</div><div id="bf-desc">--</div></div>
         <div id="bf-go">--</div>
       </div>
-
-      <!-- Multi-altitude wind -->
       <div id="wind-alt-wrap">
         <div class="wind-alt-title">
           <span>分高度風速估算</span>
@@ -519,21 +575,15 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
       </div>
       <div class="disc" id="tide-disc">最近測站：偵測中 · 資料來源：中央氣象署</div>
     </div>
-
   </div>
 
-  <!-- RESIZER 2 -->
   <div class="resizer" id="resizer-2"></div>
 
-  <!-- COL RIGHT: AIRPORT / NOTAM / WX / ASSESS -->
   <div id="col-right">
-
     <div class="sec">
       <div class="sec-title">Airport · 機場</div>
       <div id="ap-tabs"></div>
       <div id="ap-detail"><div class="ap-name" id="ap-name">--</div><div class="ap-info-grid" id="ap-info-grid"></div></div>
-
-      <!-- Flight board -->
       <div style="margin-top:8px;">
         <div style="font-size:8px;color:var(--w55);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;">
           <span>接下來3小時航班</span>
@@ -578,7 +628,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 
     <div class="sec">
       <div class="sec-title">Weather · 天氣</div>
-      <!-- 逐時預報 -->
       <div id="wx-hourly-wrap" style="overflow-x:auto;scrollbar-width:none;margin-bottom:8px;">
         <div id="wx-hourly" style="display:flex;gap:4px;min-width:max-content;padding-bottom:2px;"></div>
       </div>
@@ -618,7 +667,7 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
     <div class="disc">資料來源：open-meteo · SunCalc · 民航局 GeoJSON<br>分高度風速為估算值，飛行前請以官方資料為準<br><span style="color:var(--w30);letter-spacing:.08em;">AERIAL DASHBOARD BY 里卡豆 · 仟隅視覺有限公司</span></div>
   </div>
 
-</div><!-- /app -->
+</div>
 
 <script>
 // ── CONSTANTS ──
@@ -629,19 +678,14 @@ const BEAUFORT = [
   [5.5,'和風',true],[8.0,'清風',true],[10.8,'強風',false],[13.9,'疾風',false],
   [17.2,'大風',false],[20.8,'烈風',false],[24.5,'暴風',false],[28.5,'颶風',false],[32.7,'颱風',false],
 ];
-// Alt layers: label, power-law exponent factor vs 10m baseline
 const ALT_LAYERS = [
-  {l:'0m',   f:0.70},  // surface estimate
-  {l:'60m',  f:1.10},
-  {l:'120m', f:1.22},
-  {l:'200m', f:1.32},
-  {l:'300m', f:1.40},
-  {l:'500m', f:1.50},
+  {l:'0m',f:0.70},{l:'60m',f:1.10},{l:'120m',f:1.22},
+  {l:'200m',f:1.32},{l:'300m',f:1.40},{l:'500m',f:1.50},
 ];
 const DRONE_REF = [
-  {name:'Inspire 3',        cat:'7級抗風', limit:14, bf:7},
-  {name:'Mavic 4 Pro / Air 3S', cat:'6級抗風', limit:12, bf:6},
-  {name:'Avata 360 / Mini 4 Pro', cat:'5級抗風', limit:10.7, bf:5},
+  {name:'Inspire 3',cat:'7級抗風',limit:14,bf:7},
+  {name:'Mavic 4 Pro / Air 3S',cat:'6級抗風',limit:12,bf:6},
+  {name:'Avata 360 / Mini 4 Pro',cat:'5級抗風',limit:10.7,bf:5},
 ];
 const AIRPORTS = [
   {code:'RCSS',name:'松山機場',city:'台北',goso:5.6,rwy:'10/28',elev:'6ft',freq:'119.3'},
@@ -657,6 +701,7 @@ const AP_COORDS = {
   RCNN:{lat:22.9503,lng:120.2063},RCKH:{lat:22.5773,lng:120.3500},
 };
 const KML_COLORS = ['#7dd3fc','#38bdf8','#0ea5e9','#bae6fd','#93c5fd','#60a5fa'];
+const CAA_COLORS = ['#50a0ff','#32d264','#c084fc','#fb923c','#f472b6','#fbbf24'];
 
 // ── STATE ──
 let lat=null, lng=null, map, userMk, radiusCir;
@@ -664,7 +709,8 @@ let nfzMap, nfzLayers={}, nfzInited=false;
 let layerObjects={};
 let kmlCounter=0, kmlLayers={};
 let notams=JSON.parse(localStorage.getItem('ka_notams')||'[]');
-let ws10=0; // current 10m wind speed
+let ws10=0;
+let caaLayerMap={}, caaZones=[];
 
 // ── CLOCK ──
 function updateClock(){
@@ -676,31 +722,25 @@ function updateClock(){
 }
 setInterval(updateClock,1000); updateClock();
 
-// ── ORIENTATION DETECT ──
 function onOrientationChange(){
-  // Leaflet needs a size refresh when orientation changes
   setTimeout(()=>{ if(map) map.invalidateSize(); },300);
 }
-window.addEventListener('orientationchange', onOrientationChange);
-window.addEventListener('resize', onOrientationChange);
+window.addEventListener('orientationchange',onOrientationChange);
+window.addEventListener('resize',onOrientationChange);
 
 // ── MAP ──
 function initMap(){
-  map = L.map('map',{center:[23.97,120.97],zoom:9,zoomControl:true,attributionControl:false});
+  map=L.map('map',{center:[23.97,120.97],zoom:9,zoomControl:true,attributionControl:false});
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-
-  // NFZ layers
-  nfzLayers = {
-    county_red:    L.layerGroup().addTo(map),
-    county_yellow: L.layerGroup().addTo(map),
-    park:          L.layerGroup().addTo(map),
-    port:          L.layerGroup().addTo(map),
-    temporary:     L.layerGroup().addTo(map),
+  nfzLayers={
+    county_red:L.layerGroup().addTo(map),
+    county_yellow:L.layerGroup().addTo(map),
+    park:L.layerGroup().addTo(map),
+    port:L.layerGroup().addTo(map),
+    temporary:L.layerGroup().addTo(map),
   };
   loadNFZ();
   initRadar();
-
-  // Airport markers
   AIRPORTS.forEach(ap=>{
     const ic=L.divIcon({
       html:`<div style="background:rgba(255,79,65,.85);color:#fff;font-family:monospace;font-size:9px;padding:2px 5px;border-radius:3px;border:1px solid rgba(255,120,100,.6);white-space:nowrap;">${ap.code}</div>`,
@@ -710,34 +750,21 @@ function initMap(){
       .addTo(map)
       .bindPopup(`<b style="color:#ff6f60">${ap.code}</b><br>${ap.name}<br>GOSO: ${ap.goso} km`);
   });
-
-
-  // ── Locate Control（定位按鈕，放在 +/- 下方）──
-  const LocateControl = L.Control.extend({
-    options: { position: 'topleft' },
-    onAdd: function(){
-      const container = L.DomUtil.create('div','leaflet-control-locate leaflet-bar');
-      const a = L.DomUtil.create('a','',container);
-      a.href = '#';
-      a.title = '重新定位';
-      a.innerHTML = '⊕';
-      a.setAttribute('role','button');
-      L.DomEvent.on(a,'click',function(e){
-        L.DomEvent.stopPropagation(e);
-        L.DomEvent.preventDefault(e);
-        locate();
-      });
-      return container;
+  const LocateControl=L.Control.extend({
+    options:{position:'topleft'},
+    onAdd:function(){
+      const c=L.DomUtil.create('div','leaflet-control-locate leaflet-bar');
+      const a=L.DomUtil.create('a','',c);
+      a.href='#';a.title='重新定位';a.innerHTML='⊕';a.setAttribute('role','button');
+      L.DomEvent.on(a,'click',function(e){L.DomEvent.stopPropagation(e);L.DomEvent.preventDefault(e);locate();});
+      return c;
     }
   });
   new LocateControl().addTo(map);
 }
 
-// ── LOAD NFZ GEOJSON (from kardo-tools repo) ──
 function loadNFZ(){
   ldStatus('載入空域圖層...');
-
-  // uav_red — 縣市紅區
   fetch(BASE+'uav_red.geojson').then(r=>r.json()).then(data=>{
     data.features.forEach(f=>{
       const p=f.properties||{};
@@ -749,8 +776,6 @@ function loadNFZ(){
       nfzLayers.county_red.addLayer(lyr);
     });
   }).catch(()=>{});
-
-  // uav_yellow — 縣市黃區
   fetch(BASE+'uav_yellow.geojson').then(r=>r.json()).then(data=>{
     data.features.forEach(f=>{
       const p=f.properties||{};
@@ -762,8 +787,6 @@ function loadNFZ(){
       nfzLayers.county_yellow.addLayer(lyr);
     });
   }).catch(()=>{});
-
-  // uav_ry — 紅黃混合
   fetch(BASE+'uav_ry.geojson').then(r=>r.json()).then(data=>{
     data.features.forEach(f=>{
       const p=f.properties||{};
@@ -777,8 +800,6 @@ function loadNFZ(){
       if(isRed) nfzLayers.county_red.addLayer(lyr); else nfzLayers.county_yellow.addLayer(lyr);
     });
   }).catch(()=>{});
-
-  // national_park
   fetch(BASE+'national_park.geojson').then(r=>r.json()).then(data=>{
     data.features.forEach(f=>{
       const name=(f.properties||{})['name']||(f.properties||{})['空域名稱']||'國家公園';
@@ -788,8 +809,6 @@ function loadNFZ(){
       nfzLayers.park.addLayer(lyr);
     });
   }).catch(()=>{});
-
-  // commercial_port
   fetch(BASE+'commercial_port.geojson').then(r=>r.json()).then(data=>{
     data.features.forEach(f=>{
       const name=(f.properties||{})['name']||(f.properties||{})['空域名稱']||'商港';
@@ -799,8 +818,6 @@ function loadNFZ(){
       nfzLayers.port.addLayer(lyr);
     });
   }).catch(()=>{});
-
-  // temporary
   fetch(BASE+'temporary.geojson').then(r=>r.json()).then(data=>{
     data.features.forEach(f=>{
       const p=f.properties||{};
@@ -816,50 +833,36 @@ function loadNFZ(){
   }).catch(()=>{});
 }
 
-// 台灣全島範圍 bounds（雷達圖對應的經緯度範圍）
-// 按 Shift+R 可打開即時校準工具
-// ── RADAR（只顯示預覽圖，不疊加地圖）──
-let radarTimer = null;
-
-function initRadar(){
-  loadRadar();
-  radarTimer = setInterval(loadRadar, 10 * 60 * 1000);
-}
-
+let radarTimer=null;
+function initRadar(){ loadRadar(); radarTimer=setInterval(loadRadar,10*60*1000); }
 function loadRadar(){
-  const WORKER = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
-  const url = `${WORKER}?type=radar&_t=${Date.now()}`;
-  const img = document.getElementById('radar-img');
-  const loading = document.getElementById('radar-loading');
-  const ts = document.getElementById('radar-ts');
+  const WORKER='https://cool-dew-3b6d.songmatin-2e5.workers.dev';
+  const url=`${WORKER}?type=radar&_t=${Date.now()}`;
+  const img=document.getElementById('radar-img');
+  const loading=document.getElementById('radar-loading');
+  const ts=document.getElementById('radar-ts');
   if(!img) return;
-  const tmp = new Image();
-  tmp.onload = ()=>{
-    img.src = tmp.src;
-    img.style.opacity = '1';
-    if(loading) loading.style.display = 'none';
-    const now = new Date();
-    if(ts) ts.textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 更新`;
+  const tmp=new Image();
+  tmp.onload=()=>{
+    img.src=tmp.src; img.style.opacity='1';
+    if(loading) loading.style.display='none';
+    const now=new Date();
+    if(ts) ts.textContent=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 更新`;
   };
-  tmp.onerror = ()=>{ if(loading){ loading.style.display='flex'; loading.textContent='載入失敗'; } };
-  tmp.src = url;
+  tmp.onerror=()=>{ if(loading){loading.style.display='flex';loading.textContent='載入失敗';} };
+  tmp.src=url;
 }
-
 function refreshRadarPanel(){
-  const img = document.getElementById('radar-img');
-  const loading = document.getElementById('radar-loading');
-  if(img) img.style.opacity = '0';
-  if(loading){ loading.style.display='flex'; loading.textContent='載入中…'; }
+  const img=document.getElementById('radar-img');
+  const loading=document.getElementById('radar-loading');
+  if(img) img.style.opacity='0';
+  if(loading){loading.style.display='flex';loading.textContent='載入中…';}
   loadRadar();
 }
-
-function toggleLayer(name, el){
+function toggleLayer(name,el){
   el.classList.toggle('on');
-  const on = el.classList.contains('on');
-
-  if(nfzLayers[name]){
-    if(on) nfzLayers[name].addTo(map); else map.removeLayer(nfzLayers[name]);
-  }
+  const on=el.classList.contains('on');
+  if(nfzLayers[name]){ if(on) nfzLayers[name].addTo(map); else map.removeLayer(nfzLayers[name]); }
 }
 
 // ── KML IMPORT ──
@@ -898,7 +901,7 @@ function renderKmlLayers(){
   const keys=Object.keys(kmlLayers);
   if(!keys.length){el.innerHTML='';return;}
   el.innerHTML=keys.map(id=>{const{visible,color,meta}=kmlLayers[id];const name=meta.filename.replace(/\.kml$/i,'').slice(0,18);
-    return`<div class="kml-row ${visible?'on':''}" onclick="toggleKmlLayer('${id}')">
+    return`<div class="kml-row ${visible?'on':''}" id="kr_${id}" onclick="toggleKmlLayer('${id}')">
       <div class="kml-swatch" style="background:${color};"></div>
       <div class="kml-info"><div class="kml-name">${name}</div><div class="kml-meta">ID:${meta.spaceid} · ↑${meta.height}m · ${meta.editedAt}</div></div>
       <div class="kml-toggle"></div>
@@ -906,6 +909,197 @@ function renderKmlLayers(){
     </div>`;
   }).join('');
 }
+
+// ── CAA PDF IMPORT ──
+(function(){
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  function dms(d,m,s){ return parseFloat(d)+parseFloat(m)/60+parseFloat(s)/3600; }
+
+  function setCaaStatus(type,msg){
+    const el=document.getElementById('caa-status');
+    el.className='caa-status show '+type;
+    el.textContent=msg;
+  }
+  function clearCaaStatus(){ document.getElementById('caa-status').className='caa-status'; }
+
+  function parseJobName(text){
+    let m=text.match(/作\s*業\s*名\s*稱\s+([^\n\r]{2,60})/);
+    if(m) return m[1].trim();
+    m=text.match(/計畫名稱[：:]\s*([^\n\r]{2,40})/);
+    if(m) return m[1].trim();
+    return '活動計劃書';
+  }
+  function parsePermitDate(text){
+    let m=text.match(/同意期限\s+([\d\/~～至\-]{6,25})/);
+    if(m) return m[1].trim();
+    m=text.match(/作業期間[：:]\s*([\d\/\-~～至\s年月日]{6,30})/);
+    if(m) return m[1].replace(/\s+/g,' ').trim();
+    return '—';
+  }
+  function parseAppNo(text){
+    const m=text.match(/申請號碼\s+([A-Z0-9]+)/);
+    return m?m[1]:'—';
+  }
+  function parseUnit(text){
+    const m=text.match(/申\s*請\s*單\s*位\s+([^\n\r]{2,30})/);
+    return m?m[1].trim():'—';
+  }
+  function getZoneHeaders(text){
+    const re=/空域\s*(\d+)\s*範圍各點連線/g;
+    const seen=new Set(),headers=[];
+    let m;
+    while((m=re.exec(text))!==null)
+      if(!seen.has(m[1])){ seen.add(m[1]); headers.push({index:m.index,num:m[1]}); }
+    return headers;
+  }
+  const CR1=/北緯\s*(\d+)\s*度\s*(\d+)\s*分\s*(\d+\.?\d*)\s*秒\s*東經\s*(\d+)\s*度\s*(\d+)\s*分\s*(\d+\.?\d*)\s*秒/g;
+  const CR2=/緯度\s*(\d+)\s*度\s*(\d+)\s*分\s*(\d+\.?\d*)\s*秒\s*[，,]\s*經度\s*(\d+)\s*度\s*(\d+)\s*分\s*(\d+\.?\d*)\s*秒/g;
+  function extractPoints(seg){
+    const pts=[];
+    const add=(lat,lng)=>{
+      if(pts.length>0){const f=pts[0];if(Math.abs(lat-f.lat)<0.00005&&Math.abs(lng-f.lng)<0.00005)return;}
+      pts.push({lat,lng});
+    };
+    let m;
+    CR1.lastIndex=0;
+    while((m=CR1.exec(seg))!==null) add(dms(m[1],m[2],m[3]),dms(m[4],m[5],m[6]));
+    if(!pts.length){ CR2.lastIndex=0; while((m=CR2.exec(seg))!==null) add(dms(m[1],m[2],m[3]),dms(m[4],m[5],m[6])); }
+    return pts;
+  }
+  function parseAlt(seg){
+    const m=seg.match(/作\s*業\s*高\s*度[^至]*至\s*([\d,]+)\s*英呎/);
+    return m?`↑${parseInt(m[1].replace(',',''))}ft`:'';
+  }
+  function buildZones(text,headers){
+    const zones=[];
+    headers.forEach((h,i)=>{
+      const start=h.index;
+      const end=headers[i+1]?headers[i+1].index:start+1000;
+      const seg=text.substring(start,end);
+      const pts=extractPoints(seg);
+      const alt=parseAlt(seg);
+      if(pts.length>=3)
+        zones.push({id:`caa_${Date.now()}_${i}`,num:h.num,type:'polygon',points:pts,alt});
+      else if(pts.length===1){
+        const rm=seg.match(/半徑\s*[：:]\s*(\d+\.?\d*)\s*(?:KM|km|公里)/i);
+        const radius=rm?parseFloat(rm[1])*1000:500;
+        zones.push({id:`caa_${Date.now()}_${i}`,num:h.num,type:'circle',center:pts[0],radius,alt});
+      }
+    });
+    return zones;
+  }
+  function addZoneLayer(zone,color){
+    let layer;
+    if(zone.type==='polygon'){
+      const ll=zone.points.map(p=>[p.lat,p.lng]);
+      layer=L.polygon(ll,{color,fillColor:color,fillOpacity:0.15,weight:2,dashArray:'6 3'}).addTo(map);
+      layer.bindPopup(`<div style="font-size:13px;font-weight:600;color:${color};margin-bottom:4px;">CAA 空域 ${zone.num}</div><div style="font-size:10px;color:rgba(255,255,255,0.6);line-height:1.7;">多邊形 · ${zone.points.length} 頂點${zone.alt?`<br>作業高度：${zone.alt}`:''}</div>`);
+    } else {
+      layer=L.circle([zone.center.lat,zone.center.lng],{radius:zone.radius,color,fillColor:color,fillOpacity:0.12,weight:2,dashArray:'6 3'}).addTo(map);
+      layer.bindPopup(`<b style="color:${color}">CAA 空域 ${zone.num}</b><br>圓形 · r=${zone.radius}m`);
+    }
+    return layer;
+  }
+  function renderCaaZones(zones){
+    const el=document.getElementById('caa-zone-list');
+    el.innerHTML=zones.map((z,i)=>{
+      const color=CAA_COLORS[i%CAA_COLORS.length];
+      const detail=z.type==='polygon'?`多邊形 · ${z.points.length} 頂點`:`圓形 · r=${z.radius}m`;
+      return`<div class="caa-zone-row on" id="czr_${z.id}" onclick="toggleCaaZone('${z.id}')">
+        <div class="caa-check">
+          <svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>
+        </div>
+        <div class="caa-zone-swatch" style="background:${color};"></div>
+        <div class="caa-zone-info">
+          <div class="caa-zone-name">空域 ${z.num}</div>
+          <div class="caa-zone-detail">${detail}</div>
+        </div>
+        ${z.alt?`<div class="caa-zone-alt">${z.alt}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+
+  window.toggleCaaZone=function(id){
+    const item=caaLayerMap[id]; if(!item) return;
+    item.visible=!item.visible;
+    const row=document.getElementById('czr_'+id);
+    if(item.visible){ item.layer.addTo(map); row&&row.classList.add('on'); }
+    else{ map.removeLayer(item.layer); row&&row.classList.remove('on'); }
+  };
+
+  window.fitCaaZones=function(){
+    const bounds=[];
+    Object.values(caaLayerMap).forEach(item=>{
+      if(!item.visible) return;
+      try{ const b=item.layer.getBounds?item.layer.getBounds():null; if(b) bounds.push(b); }catch(e){}
+    });
+    if(!bounds.length) return;
+    const combined=bounds.reduce((acc,b)=>acc.extend(b),L.latLngBounds(bounds[0]));
+    map.fitBounds(combined,{padding:[30,30],maxZoom:12});
+  };
+
+  window.clearCaaPermit=function(){
+    Object.values(caaLayerMap).forEach(item=>{ try{map.removeLayer(item.layer);}catch(e){} });
+    caaLayerMap={}; caaZones=[];
+    document.getElementById('caa-permit-card').style.display='none';
+    document.getElementById('caa-upload-label').textContent='📄 匯入活動計劃書 PDF';
+    clearCaaStatus();
+  };
+
+  document.getElementById('caa-file-input').addEventListener('change',async(e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    const label=document.getElementById('caa-upload-label');
+    label.textContent='解析中...';
+    setCaaStatus('loading','⏳ 讀取 PDF...');
+    try{
+      const buf=await file.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+      let fullText='';
+      for(let i=1;i<=pdf.numPages;i++){
+        const page=await pdf.getPage(i);
+        const content=await page.getTextContent();
+        fullText+=content.items.map(s=>s.str).join(' ')+'\n';
+      }
+      const jobName=parseJobName(fullText);
+      const permitDate=parsePermitDate(fullText);
+      const appNo=parseAppNo(fullText);
+      const unit=parseUnit(fullText);
+      const headers=getZoneHeaders(fullText);
+      const zones=buildZones(fullText,headers);
+      if(!zones.length){
+        setCaaStatus('err','⚠️ 未偵測到空域座標');
+        label.textContent='📄 匯入活動計劃書 PDF';
+        return;
+      }
+      // clear old
+      window.clearCaaPermit();
+      // add new
+      caaZones=zones;
+      zones.forEach((z,i)=>{
+        const color=CAA_COLORS[i%CAA_COLORS.length];
+        const layer=addZoneLayer(z,color);
+        caaLayerMap[z.id]={layer,visible:true,color};
+      });
+      setTimeout(window.fitCaaZones,100);
+      document.getElementById('caa-app-no').textContent=`申請號碼 ${appNo}`;
+      document.getElementById('caa-permit-name').textContent=jobName;
+      document.getElementById('caa-permit-date').textContent=permitDate;
+      document.getElementById('caa-permit-unit').textContent=unit;
+      renderCaaZones(zones);
+      document.getElementById('caa-permit-card').style.display='block';
+      label.textContent=`✓ ${file.name.length>16?file.name.slice(0,14)+'…':file.name}`;
+      setCaaStatus('ok',`✓ 成功解析 ${zones.length} 個空域`);
+      setTimeout(clearCaaStatus,3000);
+    }catch(err){
+      setCaaStatus('err','❌ 解析失敗：'+err.message);
+      label.textContent='📄 匯入活動計劃書 PDF';
+      console.error('CAA PDF error:',err);
+    }
+    e.target.value='';
+  });
+})();
 
 // ── LOCATE ──
 function locate(){
@@ -917,7 +1111,7 @@ function onPos(p){
   lat=p.coords.latitude; lng=p.coords.longitude;
   setGPS(`${lat.toFixed(4)}, ${lng.toFixed(4)}`,'g');
   if(userMk) map.removeLayer(userMk);
-  if(radiusCir){ map.removeLayer(radiusCir); radiusCir=null; }
+  if(radiusCir){map.removeLayer(radiusCir);radiusCir=null;}
   userMk=L.circleMarker([lat,lng],{radius:8,fillColor:'#32d264',fillOpacity:1,color:'#fff',weight:2}).addTo(map).bindPopup('📍 目前位置');
   map.setView([lat,lng],12);
   updateSun(); fetchWeather();
@@ -961,8 +1155,7 @@ async function fetchWeather(){
     const d=await(await fetch(u)).json();
     const c=d.current;
     ws10=c.wind_speed_10m;
-    const wg=c.wind_gusts_10m, wd=c.wind_direction_10m;
-
+    const wg=c.wind_gusts_10m,wd=c.wind_direction_10m;
     document.getElementById('wsp').innerHTML=`${ws10.toFixed(1)}<span class="card-unit">m/s</span>`;
     document.getElementById('wgu').innerHTML=`${wg.toFixed(1)}<span class="card-unit">m/s</span>`;
     document.getElementById('wsp').style.color=ws10<5?'var(--green)':ws10<8?'var(--orange)':'var(--red)';
@@ -971,84 +1164,61 @@ async function fetchWeather(){
     document.getElementById('wx-hum').innerHTML=`${c.relative_humidity_2m}<span class="card-unit">%</span>`;
     document.getElementById('wx-vis').innerHTML=`${(c.visibility/1000).toFixed(1)}<span class="card-unit">km</span>`;
     document.getElementById('wx-cloud').innerHTML=`${c.cloud_cover}<span class="card-unit">%</span>`;
-    document.getElementById('cmp-arrow').setAttribute('transform',`rotate(${wd},23,23)`);
-
     updateBeaufort(ws10);
     renderWindAlt(ws10);
     updateAssessment(ws10,wg,c.visibility,c.cloud_cover);
-
-    // 逐時預報
     if(d.hourly) renderHourly(d.hourly);
-
-    // 獨立執行，不讓任一失敗中斷其他
     fetchTides().catch(e=>console.warn('Tide error:',e));
     fetchAQI().catch(e=>console.warn('AQI error:',e));
     ldStatus('完成');
   }catch(e){ldStatus('天氣載入失敗');}
 }
 
-// WMO weather code → emoji + 中文
 function wxIcon(code){
-  if(code===0)                      return {e:'☀️', t:'晴'};
-  if(code<=2)                       return {e:'🌤️', t:'多雲'};
-  if(code===3)                      return {e:'☁️', t:'陰'};
-  if(code<=49)                      return {e:'🌫️', t:'霧'};
-  if(code<=59)                      return {e:'🌦️', t:'毛雨'};
-  if(code<=69)                      return {e:'🌧️', t:'雨'};
-  if(code<=79)                      return {e:'🌨️', t:'雪'};
-  if(code<=82)                      return {e:'🌧️', t:'陣雨'};
-  if(code<=84)                      return {e:'🌧️', t:'大陣雨'};
-  if(code<=94)                      return {e:'⛈️', t:'雷雨'};
-  return                                   {e:'⛈️', t:'強雷'};
+  if(code===0)    return{e:'☀️',t:'晴'};
+  if(code<=2)     return{e:'🌤️',t:'多雲'};
+  if(code===3)    return{e:'☁️',t:'陰'};
+  if(code<=49)    return{e:'🌫️',t:'霧'};
+  if(code<=59)    return{e:'🌦️',t:'毛雨'};
+  if(code<=69)    return{e:'🌧️',t:'雨'};
+  if(code<=79)    return{e:'🌨️',t:'雪'};
+  if(code<=82)    return{e:'🌧️',t:'陣雨'};
+  if(code<=84)    return{e:'🌧️',t:'大陣雨'};
+  if(code<=94)    return{e:'⛈️',t:'雷雨'};
+  return               {e:'⛈️',t:'強雷'};
 }
 
 function renderHourly(hourly){
-  const el = document.getElementById('wx-hourly');
-  if(!el) return;
-  const now = new Date();
-  const nowH = now.getHours();
-  // 顯示現在 + 接下來 11 小時（共 12 格）
-  const times = hourly.time || [];
-  const temps = hourly.temperature_2m || [];
-  const codes = hourly.weathercode || [];
-  const winds = hourly.windspeed_10m || [];
-  const pops  = hourly.precipitation_probability || [];
-
-  // 找到當前小時的 index
-  const startIdx = times.findIndex(t => {
-    const h = new Date(t).getHours();
-    return h === nowH;
-  });
-  if(startIdx < 0){ el.innerHTML=''; return; }
-
-  let html = '';
-  for(let i = startIdx; i < Math.min(startIdx + 12, times.length); i++){
-    const isNow = i === startIdx;
-    const hLabel = isNow ? '現在' : `${new Date(times[i]).getHours()}時`;
-    const temp = temps[i] != null ? Math.round(temps[i]) : '--';
-    const icon = wxIcon(codes[i] ?? 0);
-    const wind = winds[i] != null ? winds[i].toFixed(1) : '--';
-    const pop  = pops[i]  != null ? pops[i]  : null;
-    const windColor = winds[i] < 5 ? 'var(--green)' : winds[i] < 8 ? 'var(--orange)' : 'var(--red)';
-
-    html += `<div class="wx-hour${isNow?' now':''}">
+  const el=document.getElementById('wx-hourly'); if(!el) return;
+  const now=new Date(), nowH=now.getHours();
+  const times=hourly.time||[],temps=hourly.temperature_2m||[],codes=hourly.weathercode||[],winds=hourly.windspeed_10m||[],pops=hourly.precipitation_probability||[];
+  const startIdx=times.findIndex(t=>new Date(t).getHours()===nowH);
+  if(startIdx<0){el.innerHTML='';return;}
+  let html='';
+  for(let i=startIdx;i<Math.min(startIdx+12,times.length);i++){
+    const isNow=i===startIdx;
+    const hLabel=isNow?'現在':`${new Date(times[i]).getHours()}時`;
+    const temp=temps[i]!=null?Math.round(temps[i]):'--';
+    const icon=wxIcon(codes[i]??0);
+    const wind=winds[i]!=null?winds[i].toFixed(1):'--';
+    const pop=pops[i]!=null?pops[i]:null;
+    const wc=winds[i]<5?'var(--green)':winds[i]<8?'var(--orange)':'var(--red)';
+    html+=`<div class="wx-hour${isNow?' now':''}">
       <div class="wx-hour-time">${hLabel}</div>
-      <div class="wx-hour-icon" title="${icon.t}">${icon.e}</div>
+      <div class="wx-hour-icon">${icon.e}</div>
       <div class="wx-hour-temp">${temp}°</div>
-      <div class="wx-hour-wind" style="color:${windColor};">${wind}<span style="color:var(--w30);font-size:7px;">m/s</span></div>
-      ${pop != null ? `<div class="wx-hour-wind" style="color:var(--blue);">${pop}%</div>` : ''}
+      <div class="wx-hour-wind" style="color:${wc};">${wind}<span style="color:var(--w30);font-size:7px;">m/s</span></div>
+      ${pop!=null?`<div class="wx-hour-wind" style="color:var(--blue);">${pop}%</div>`:''}
     </div>`;
   }
-  el.innerHTML = html;
+  el.innerHTML=html;
 }
 
-// ── BEAUFORT ──
 function updateBeaufort(spd){
   let bf=0;
   for(let i=BEAUFORT.length-1;i>=0;i--){if(spd>=BEAUFORT[i][0]){bf=i;break;}}
   const[,desc,ok]=BEAUFORT[bf];
-  const numEl=document.getElementById('bf-num');
-  const goEl=document.getElementById('bf-go');
+  const numEl=document.getElementById('bf-num'),goEl=document.getElementById('bf-go');
   numEl.textContent=bf; numEl.style.color=ok?'var(--green)':'var(--red)';
   document.getElementById('bf-desc').textContent=desc;
   goEl.textContent=ok?'GO':'NO-GO';
@@ -1057,19 +1227,16 @@ function updateBeaufort(spd){
   goEl.style.background=ok?'rgba(50,210,100,.12)':'rgba(255,79,65,.12)';
 }
 
-// ── MULTI-ALT WIND ──
 const DRONE_LIMITS={avata:10.7,m4p:12,inspire3:14};
 function renderWindAlt(ws){
   const maxAlt=Math.max(...ALT_LAYERS.map(a=>ws*a.f));
-  const scale=maxAlt>15?maxAlt:15; // bar scale max
+  const scale=maxAlt>15?maxAlt:15;
   const avPct=(DRONE_LIMITS.avata/scale*100).toFixed(1);
   const m4Pct=(DRONE_LIMITS.m4p/scale*100).toFixed(1);
   const inPct=(DRONE_LIMITS.inspire3/scale*100).toFixed(1);
-
   let html='';
   ALT_LAYERS.forEach(a=>{
-    const v=(ws*a.f), vs=v.toFixed(1);
-    const p=Math.min(v/scale*100,100).toFixed(1);
+    const v=ws*a.f,vs=v.toFixed(1),p=Math.min(v/scale*100,100).toFixed(1);
     const c=v<5?'var(--green)':v<10?'var(--orange)':'var(--red)';
     html+=`<div class="wind-row">
       <div class="wind-alt-lbl">${a.l}</div>
@@ -1083,12 +1250,10 @@ function renderWindAlt(ws){
     </div>`;
   });
   document.getElementById('wind-alt-rows').innerHTML=html;
-
-  // Drone table
   const maxWs=ws*1.5;
   let dt=`<div class="drone-hd"><span>機體</span><div class="drone-hd-r">抗風</div><div class="drone-hd-r">風級</div></div>`;
   DRONE_REF.forEach(d=>{
-    const over=maxWs>d.limit, warn=!over&&maxWs>d.limit*0.8;
+    const over=maxWs>d.limit,warn=!over&&maxWs>d.limit*0.8;
     const bc=over?'var(--red)':warn?'var(--orange)':'var(--w70)';
     const ic=over?'🚫':warn?'⚠️':'✅';
     dt+=`<div class="drone-row">
@@ -1100,94 +1265,60 @@ function renderWindAlt(ws){
   document.getElementById('drone-table').innerHTML=dt;
 }
 
-// ── TIDE (CWA Real Data) ──
-const CWA_KEY = 'CWA-88714A94-2A9A-4B48-B5E4-E7595BDF48D9';
-
+const CWA_KEY='CWA-88714A94-2A9A-4B48-B5E4-E7595BDF48D9';
 async function fetchTides(){
-  if(!lat || !lng) return;
-  const tideDisc = document.getElementById('tide-disc');
-
+  if(!lat||!lng) return;
+  const tideDisc=document.getElementById('tide-disc');
   try{
-    // 不帶 locationName，抓全部測站，再用實際座標比對最近的
-    const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&format=JSON`;
-    const res = await fetch(url);
-    const json = await res.json();
-
-    const forecasts = json?.records?.TideForecasts;
-    if(!forecasts || !forecasts.length) throw new Error('no TideForecasts');
-
-    // 每個測站有 Location.Latitude / Location.Longitude
-    // 找出座標最接近使用者的測站
-    let bestForecast = null, minD = Infinity;
-    forecasts.forEach(item => {
-      const loc = item.Location;
-      const sLat = parseFloat(loc?.Latitude);
-      const sLng = parseFloat(loc?.Longitude);
-      if(isNaN(sLat) || isNaN(sLng)) return;
-      const d = Math.hypot(sLat - lat, sLng - lng);
-      if(d < minD){ minD = d; bestForecast = item; }
+    const url=`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&format=JSON`;
+    const res=await fetch(url);
+    const json=await res.json();
+    const forecasts=json?.records?.TideForecasts;
+    if(!forecasts||!forecasts.length) throw new Error('no TideForecasts');
+    let bestForecast=null,minD=Infinity;
+    forecasts.forEach(item=>{
+      const loc=item.Location;
+      const sLat=parseFloat(loc?.Latitude),sLng=parseFloat(loc?.Longitude);
+      if(isNaN(sLat)||isNaN(sLng)) return;
+      const d=Math.hypot(sLat-lat,sLng-lng);
+      if(d<minD){minD=d;bestForecast=item;}
     });
-
     if(!bestForecast) throw new Error('找不到最近測站');
-
-    const loc = bestForecast.Location;
-    const stationName = loc.LocationName;
-    const daily = loc?.TimePeriods?.Daily;
-    if(!daily || !daily.length) throw new Error('no Daily');
-
-    const times = daily[0]?.Time || [];
+    const loc=bestForecast.Location;
+    const stationName=loc.LocationName;
+    const daily=loc?.TimePeriods?.Daily;
+    if(!daily||!daily.length) throw new Error('no Daily');
+    const times=daily[0]?.Time||[];
     if(!times.length) throw new Error('no Time entries');
-
-    const tides = times.map(t => ({
-      type:   t.Tide,
-      time:   t.DateTime ? t.DateTime.slice(11,16) : '--:--',
-      height: (() => {
-        const h = t.TideHeights;
-        const v = h?.AboveChartDatum ?? h?.AboveMSL ?? h?.LandSurveyDatum;
-        return v != null ? parseInt(v) : '--';
-      })(),
-      _raw: t.TideHeights
+    const tides=times.map(t=>({
+      type:t.Tide,
+      time:t.DateTime?t.DateTime.slice(11,16):'--:--',
+      height:(()=>{const h=t.TideHeights;const v=h?.AboveChartDatum??h?.AboveMSL??h?.LandSurveyDatum;return v!=null?parseInt(v):'--';})(),
+      _raw:t.TideHeights
     }));
-
-    console.log('[Tide] 測站:', stationName,
-      '座標:', loc.Latitude, loc.Longitude,
-      '今日:', tides.map(t=>`${t.type} ${t.time} ${t.height}cm`));
-
-    const highs = tides.filter(t => t.type === '滿潮');
-    const lows  = tides.filter(t => t.type === '乾潮');
-
-    const fill = (timeId, heightId, data) => {
+    const highs=tides.filter(t=>t.type==='滿潮');
+    const lows=tides.filter(t=>t.type==='乾潮');
+    const fill=(timeId,heightId,data)=>{
       if(!data) return;
-      document.getElementById(timeId).textContent   = data.time;
-      document.getElementById(heightId).textContent = data.height !== '--' ? `${data.height}cm` : '--cm';
+      document.getElementById(timeId).textContent=data.time;
+      document.getElementById(heightId).textContent=data.height!=='--'?`${data.height}cm`:'--cm';
     };
-
-    fill('ht1', 'ht1h', highs[0]);
-    fill('lt1', 'lt1h', lows[0]);
-    fill('ht2', 'ht2h', highs[1] || lows[1]);
-
-    const sampleH = tides[0]?._raw;
-    const datum = sampleH?.AboveChartDatum != null ? '海圖基準面' :
-                  sampleH?.AboveMSL        != null ? '平均海面'   : '高程基準';
-    if(tideDisc) tideDisc.innerHTML = `測站：${stationName} · 基準：${datum} · 來源：中央氣象署`;
-
-  } catch(e){
-    console.warn('Tide fetch error:', e.message);
-    ['ht1','lt1','ht2'].forEach(id => document.getElementById(id).textContent = '--:--');
-    ['ht1h','lt1h','ht2h'].forEach(id => document.getElementById(id).textContent = '--cm');
-    if(tideDisc) tideDisc.innerHTML = `潮汐資料載入失敗 · 請查中央氣象署`;
+    fill('ht1','ht1h',highs[0]);fill('lt1','lt1h',lows[0]);fill('ht2','ht2h',highs[1]||lows[1]);
+    const sampleH=tides[0]?._raw;
+    const datum=sampleH?.AboveChartDatum!=null?'海圖基準面':sampleH?.AboveMSL!=null?'平均海面':'高程基準';
+    if(tideDisc) tideDisc.innerHTML=`測站：${stationName} · 基準：${datum} · 來源：中央氣象署`;
+  }catch(e){
+    console.warn('Tide fetch error:',e.message);
+    ['ht1','lt1','ht2'].forEach(id=>document.getElementById(id).textContent='--:--');
+    ['ht1h','lt1h','ht2h'].forEach(id=>document.getElementById(id).textContent='--cm');
+    if(tideDisc) tideDisc.innerHTML=`潮汐資料載入失敗 · 請查中央氣象署`;
   }
 }
 
-const AIR = '3c10eb91-993a-4100-a3b3-e0cd809b2df6';
-const AP_IATA = {
-  RCSS:'TSA', RCTP:'TPE', RCGM:'HSZ',
-  RCMQ:'RMQ', RCNN:'TNN', RCKH:'KHH',
-};
-let activeApIdx = 0;
-let flightTimer = null;
+const AIR='3c10eb91-993a-4100-a3b3-e0cd809b2df6';
+const AP_IATA={RCSS:'TSA',RCTP:'TPE',RCGM:'HSZ',RCMQ:'RMQ',RCNN:'TNN',RCKH:'KHH'};
+let activeApIdx=0,flightTimer=null;
 
-// ── AIRPORT ──
 function buildAirportTabs(){
   document.getElementById('ap-tabs').innerHTML=AIRPORTS.map((ap,i)=>`<div class="ap-tab${i===0?' active':''}" onclick="selectAirport(${i})">${ap.code}</div>`).join('');
   selectAirport(0);
@@ -1202,205 +1333,130 @@ function selectAirport(i){
     <div class="ap-info-item"><div class="ap-info-label">GOSO</div><div class="ap-info-val">${ap.goso} km</div></div>
     <div class="ap-info-item"><div class="ap-info-label">跑道</div><div class="ap-info-val">${ap.rwy}</div></div>
     <div class="ap-info-item"><div class="ap-info-label">高度</div><div class="ap-info-val">${ap.elev}</div></div>
-    <div class="ap-info-item"><div class="ap-info-label">進場頻率</div><div class="ap-info-val">${ap.freq} MHz</div></div>
-  `;
-  // Reset flight list and fetch
+    <div class="ap-info-item"><div class="ap-info-label">進場頻率</div><div class="ap-info-val">${ap.freq} MHz</div></div>`;
   document.getElementById('flight-status-bar').style.display='none';
   document.getElementById('flight-list').innerHTML='<div style="padding:12px;font-size:10px;color:var(--w30);text-align:center;">載入中...</div>';
   if(flightTimer) clearInterval(flightTimer);
   fetchFlights();
-  flightTimer = setInterval(fetchFlights, 20*60*1000);
+  flightTimer=setInterval(fetchFlights,20*60*1000);
 }
 
 async function fetchFlights(){
-  const btn = document.getElementById('flt-refresh-btn');
-  const iata = AP_IATA[AIRPORTS[activeApIdx].code];
-  if(!iata){ document.getElementById('flight-list').innerHTML='<div style="padding:10px;font-size:10px;color:var(--w30);text-align:center;">此機場暫無資料</div>'; return; }
+  const btn=document.getElementById('flt-refresh-btn');
+  const iata=AP_IATA[AIRPORTS[activeApIdx].code];
+  if(!iata){document.getElementById('flight-list').innerHTML='<div style="padding:10px;font-size:10px;color:var(--w30);text-align:center;">此機場暫無資料</div>';return;}
   if(btn) btn.disabled=true;
-
   try{
-    const [arr, dep] = await Promise.all([
+    const[arr,dep]=await Promise.all([
       fetch(`https://airlabs.co/api/v9/schedules?arr_iata=${iata}&api_key=${AIR}`).then(r=>r.json()),
       fetch(`https://airlabs.co/api/v9/schedules?dep_iata=${iata}&api_key=${AIR}`).then(r=>r.json()),
     ]);
-
-    const all = [
-      ...(arr.response||[]).map(f=>({...f,dir:'arr'})),
-      ...(dep.response||[]).map(f=>({...f,dir:'dep'})),
-    ];
-
-    const now = new Date();
-
+    const all=[...(arr.response||[]).map(f=>({...f,dir:'arr'})),...(dep.response||[]).map(f=>({...f,dir:'dep'}))];
+    const now=new Date();
     function parseT(f){
-      const s = f.dir==='arr'
-        ? (f.arr_estimated||f.arr_actual||f.arr_time)
-        : (f.dep_estimated||f.dep_actual||f.dep_time);
+      const s=f.dir==='arr'?(f.arr_estimated||f.arr_actual||f.arr_time):(f.dep_estimated||f.dep_actual||f.dep_time);
       if(!s) return null;
-      const d = new Date((s.includes('T')?s:s.replace(' ','T'))+'+08:00');
+      const d=new Date((s.includes('T')?s:s.replace(' ','T'))+'+08:00');
       return isNaN(d)?null:d;
     }
-
-    const parsed = all
-      .filter(f=>f.status!=='landed'&&f.status!=='cancelled')
-      .map(f=>({...f,t:parseT(f)}))
-      .filter(f=>f.t)
-      .sort((a,b)=>a.t-b.t);
-
-    // dedupe codeshare (same minute)
-    const deduped=[];
-    let lastMin=null;
+    const parsed=all.filter(f=>f.status!=='landed'&&f.status!=='cancelled').map(f=>({...f,t:parseT(f)})).filter(f=>f.t).sort((a,b)=>a.t-b.t);
+    const deduped=[];let lastMin=null;
     parsed.forEach(f=>{const m=Math.round(f.t/60000);if(m!==lastMin){deduped.push(f);lastMin=m;}});
-
-    // next 3 hours only
-    const upcoming = deduped.filter(f=>f.t>now && f.t<new Date(now.getTime()+3*3600000));
-
-    // render status bar
-    const next = upcoming[0]||null;
-    const prev = deduped.filter(f=>f.t<=now).slice(-1)[0]||null;
-    const gapLeft  = next ? Math.round((next.t-now)/60000) : null;
-    const gapTotal = (prev&&next) ? Math.round((next.t-prev.t)/60000) : null;
-    const safeColor = gapLeft===null?'var(--green)':gapLeft>=15?'var(--green)':gapLeft>=8?'var(--orange)':'var(--red)';
-    const safeLabel = gapLeft===null?'✅ 無航班':gapLeft>=15?'✅ 充裕':gapLeft>=8?'⚠️ 留意':'🚫 緊張';
-
-    const sb = document.getElementById('flight-status-bar');
+    const upcoming=deduped.filter(f=>f.t>now&&f.t<new Date(now.getTime()+3*3600000));
+    const next=upcoming[0]||null,prev=deduped.filter(f=>f.t<=now).slice(-1)[0]||null;
+    const gapLeft=next?Math.round((next.t-now)/60000):null;
+    const gapTotal=(prev&&next)?Math.round((next.t-prev.t)/60000):null;
+    const safeColor=gapLeft===null?'var(--green)':gapLeft>=15?'var(--green)':gapLeft>=8?'var(--orange)':'var(--red)';
+    const safeLabel=gapLeft===null?'✅ 無航班':gapLeft>=15?'✅ 充裕':gapLeft>=8?'⚠️ 留意':'🚫 緊張';
+    const sb=document.getElementById('flight-status-bar');
     sb.style.display='block';
-
     if(!next){
       sb.innerHTML=`<div style="font-size:13px;font-weight:600;color:var(--green);">✅ 未來3小時無航班</div>`;
     } else {
-      const pct = gapTotal ? Math.max(0,Math.min(100,Math.round(gapLeft/gapTotal*100))) : 100;
+      const pct=gapTotal?Math.max(0,Math.min(100,Math.round(gapLeft/gapTotal*100))):100;
       sb.innerHTML=`
         <div class="flt-dir-label">${next.dir==='arr'?'↓ 下一班降落':'↑ 下一班起飛'}</div>
         <div class="flt-status-row">
-          <div>
-            <div class="flt-countdown" style="color:${safeColor};">${gapLeft}<span class="flt-countdown-unit">分鐘後</span></div>
-          </div>
-          <div class="flt-next-info">
-            <div class="flt-next-time" style="color:${safeColor};">${fmt(next.t)}</div>
-            <div class="flt-next-no">${next.flight_iata||next.flight_icao||'—'}</div>
-          </div>
+          <div><div class="flt-countdown" style="color:${safeColor};">${gapLeft}<span class="flt-countdown-unit">分鐘後</span></div></div>
+          <div class="flt-next-info"><div class="flt-next-time" style="color:${safeColor};">${fmt(next.t)}</div><div class="flt-next-no">${next.flight_iata||next.flight_icao||'—'}</div></div>
         </div>
-        ${gapTotal?`
-        <div class="flt-gap-track"><div class="flt-gap-fill" style="width:${pct}%;background:${safeColor};"></div></div>
-        <div class="flt-gap-info">
-          <span>${prev?fmt(prev.t):'—'}</span>
-          <span class="flt-safe-badge" style="color:${safeColor};">${safeLabel}</span>
-          <span>${fmt(next.t)}</span>
-        </div>`:''}
-      `;
+        ${gapTotal?`<div class="flt-gap-track"><div class="flt-gap-fill" style="width:${pct}%;background:${safeColor};"></div></div>
+        <div class="flt-gap-info"><span>${prev?fmt(prev.t):'—'}</span><span class="flt-safe-badge" style="color:${safeColor};">${safeLabel}</span><span>${fmt(next.t)}</span></div>`:''}`;
     }
-
-    // render list
-    const fl = document.getElementById('flight-list');
+    const fl=document.getElementById('flight-list');
     if(!upcoming.length){
       fl.innerHTML='<div style="padding:12px;font-size:10px;color:var(--w55);text-align:center;">無航班資料</div>';
     } else {
-      fl.innerHTML = upcoming.slice(0,18).map((f,i,arr)=>{
-        const dirIcon = f.dir==='arr'?'↓':'↑';
-        const dirColor = f.dir==='arr'?'var(--blue)':'var(--accent)';
-        const route = f.dir==='arr'?(f.dep_iata||'—')+' →':'→ '+(f.arr_iata||'—');
-        const isFirst = i===0;
+      fl.innerHTML=upcoming.slice(0,18).map((f,i,arr)=>{
+        const dirIcon=f.dir==='arr'?'↓':'↑',dirColor=f.dir==='arr'?'var(--blue)':'var(--accent)';
+        const route=f.dir==='arr'?(f.dep_iata||'—')+' →':'→ '+(f.arr_iata||'—');
+        const isFirst=i===0;
         let html=`<div class="flt-item${isFirst?' highlight':''}">
           <div class="flt-dir" style="color:${dirColor};">${dirIcon}</div>
-          <div style="flex:1;min-width:0;">
-            <div class="flt-no">${f.flight_iata||f.flight_icao||'—'}</div>
-            <div class="flt-route">${route}</div>
-          </div>
+          <div style="flex:1;min-width:0;"><div class="flt-no">${f.flight_iata||f.flight_icao||'—'}</div><div class="flt-route">${route}</div></div>
           <div class="flt-time" style="color:${dirColor};">${fmt(f.t)}</div>
         </div>`;
-        // gap badge between flights
         if(i<arr.length-1){
           const gap=Math.round((arr[i+1].t-f.t)/60000);
-          if(gap>=10&&gap<180){
-            const gc=gap>=20?'var(--green)':'var(--orange)';
-            html+=`<div class="flt-gap-badge" style="color:${gc};">${gap>=20?'✅':'⚠️'} 空檔 ${gap} 分鐘</div>`;
-          }
+          if(gap>=10&&gap<180){const gc=gap>=20?'var(--green)':'var(--orange)';html+=`<div class="flt-gap-badge" style="color:${gc};">${gap>=20?'✅':'⚠️'} 空檔 ${gap} 分鐘</div>`;}
         }
         return html;
       }).join('');
     }
-
-    // update timestamp
-    const updEl = document.getElementById('flt-updated');
+    const updEl=document.getElementById('flt-updated');
     if(updEl) updEl.textContent=`${fmt(now)} 查詢`;
-
-  } catch(e){
+  }catch(e){
     document.getElementById('flight-list').innerHTML='<div style="padding:12px;font-size:10px;color:var(--red);text-align:center;">查詢失敗，請稍後再試</div>';
   }
   if(btn) btn.disabled=false;
 }
 
-// ── AQI ──
-const AQI_COLORS = {
-  '良好':    { bg:'#32d264', text:'#000' },
-  '普通':    { bg:'#ffd60a', text:'#000' },
-  '對敏感族群不健康': { bg:'#ff9f0a', text:'#000' },
-  '不健康':  { bg:'#ff4f41', text:'#fff' },
-  '非常不健康': { bg:'#c084fc', text:'#fff' },
-  '有害':    { bg:'#7f1d1d', text:'#fff' },
-};
+const AQI_COLORS={'良好':{bg:'#32d264',text:'#000'},'普通':{bg:'#ffd60a',text:'#000'},'對敏感族群不健康':{bg:'#ff9f0a',text:'#000'},'不健康':{bg:'#ff4f41',text:'#fff'},'非常不健康':{bg:'#c084fc',text:'#fff'},'有害':{bg:'#7f1d1d',text:'#fff'}};
 
 async function fetchAQI(){
-  if(!lat || !lng) return;
+  if(!lat||!lng) return;
   try{
-    const url = 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
-    const res = await fetch(url);
-    const json = await res.json();
-    const records = Array.isArray(json) ? json : json?.records;
-    if(!records || !records.length) throw new Error('no records');
-
-    // 依發布時間排序，確保抓最新資料
-    records.sort((a,b) => new Date(b.publishtime) - new Date(a.publishtime));
-
-    let best = null, minD = Infinity;
-    records.forEach(r => {
-      const rlat = parseFloat(r.latitude), rlng = parseFloat(r.longitude);
+    const url='https://cool-dew-3b6d.songmatin-2e5.workers.dev';
+    const res=await fetch(url);
+    const json=await res.json();
+    const records=Array.isArray(json)?json:json?.records;
+    if(!records||!records.length) throw new Error('no records');
+    records.sort((a,b)=>new Date(b.publishtime)-new Date(a.publishtime));
+    let best=null,minD=Infinity;
+    records.forEach(r=>{
+      const rlat=parseFloat(r.latitude),rlng=parseFloat(r.longitude);
       if(isNaN(rlat)||isNaN(rlng)) return;
-      const aqiVal = parseFloat(r.aqi);
+      const aqiVal=parseFloat(r.aqi);
       if(isNaN(aqiVal)) return;
-      const d = Math.hypot(rlat-lat, rlng-lng);
-      if(d<minD){ minD=d; best=r; }
+      const d=Math.hypot(rlat-lat,rlng-lng);
+      if(d<minD){minD=d;best=r;}
     });
     if(!best) throw new Error('找不到附近測站');
-
-    const aqi  = parseInt(best.aqi) || 0;
-    const stn  = best.sitename || '--';
-    const pm25 = best['pm2.5'] ?? '--';
-    const pm10 = best.pm10    ?? '--';
-    const o3   = best.o3      ?? '--';
-
-    let status, col;
-    if     (aqi<=50)  {status='良好';             col={bg:'#32d264',text:'#000'};}
-    else if(aqi<=100) {status='普通';             col={bg:'#ffd60a',text:'#000'};}
-    else if(aqi<=150) {status='對敏感族群不健康'; col={bg:'#ff9f0a',text:'#000'};}
-    else if(aqi<=200) {status='不健康';           col={bg:'#ff4f41',text:'#fff'};}
-    else if(aqi<=300) {status='非常不健康';       col={bg:'#c084fc',text:'#fff'};}
-    else              {status='有害';             col={bg:'#7f1d1d',text:'#fff'};}
-
-    const badge = document.getElementById('aqi-badge');
-    badge.textContent      = aqi;
-    badge.style.background = col.bg;
-    badge.style.color      = col.text;
-
-    document.getElementById('aqi-status').textContent  = status;
-    document.getElementById('aqi-status').style.color  = col.bg;
-    document.getElementById('aqi-station').textContent = `測站：${stn}`;
-    document.getElementById('aqi-pm25').innerHTML = `${pm25}<span class="card-unit">μg</span>`;
-    document.getElementById('aqi-pm10').innerHTML = `${pm10}<span class="card-unit">μg</span>`;
-    document.getElementById('aqi-o3').innerHTML   = `${o3}<span class="card-unit">ppb</span>`;
-
-    const pm25v = parseFloat(pm25);
-    document.getElementById('aqi-pm25').style.color =
-      isNaN(pm25v)?'var(--w85)':pm25v<15?'var(--green)':pm25v<35?'var(--orange)':'var(--red)';
-
-  } catch(e){
-    console.warn('AQI error:', e.message);
-    document.getElementById('aqi-status').textContent  = '資料載入失敗';
-    document.getElementById('aqi-station').textContent = e.message;
+    const aqi=parseInt(best.aqi)||0,stn=best.sitename||'--',pm25=best['pm2.5']??'--',pm10=best.pm10??'--',o3=best.o3??'--';
+    let status,col;
+    if(aqi<=50){status='良好';col={bg:'#32d264',text:'#000'};}
+    else if(aqi<=100){status='普通';col={bg:'#ffd60a',text:'#000'};}
+    else if(aqi<=150){status='對敏感族群不健康';col={bg:'#ff9f0a',text:'#000'};}
+    else if(aqi<=200){status='不健康';col={bg:'#ff4f41',text:'#fff'};}
+    else if(aqi<=300){status='非常不健康';col={bg:'#c084fc',text:'#fff'};}
+    else{status='有害';col={bg:'#7f1d1d',text:'#fff'};}
+    const badge=document.getElementById('aqi-badge');
+    badge.textContent=aqi;badge.style.background=col.bg;badge.style.color=col.text;
+    document.getElementById('aqi-status').textContent=status;
+    document.getElementById('aqi-status').style.color=col.bg;
+    document.getElementById('aqi-station').textContent=`測站：${stn}`;
+    document.getElementById('aqi-pm25').innerHTML=`${pm25}<span class="card-unit">μg</span>`;
+    document.getElementById('aqi-pm10').innerHTML=`${pm10}<span class="card-unit">μg</span>`;
+    document.getElementById('aqi-o3').innerHTML=`${o3}<span class="card-unit">ppb</span>`;
+    const pm25v=parseFloat(pm25);
+    document.getElementById('aqi-pm25').style.color=isNaN(pm25v)?'var(--w85)':pm25v<15?'var(--green)':pm25v<35?'var(--orange)':'var(--red)';
+  }catch(e){
+    console.warn('AQI error:',e.message);
+    document.getElementById('aqi-status').textContent='資料載入失敗';
+    document.getElementById('aqi-station').textContent=e.message;
   }
 }
 
-// ── ASSESSMENT ──
 function updateAssessment(ws,wg,vis,cloud){
   const items=[
     {label:'地面風速',ok:ws<8,val:`${ws.toFixed(1)} m/s`},
@@ -1416,20 +1472,13 @@ function updateAssessment(ws,wg,vis,cloud){
     </div>`).join('');
 }
 
-// ── NOTAM ──
 function saveNotams(){localStorage.setItem('ka_notams',JSON.stringify(notams));}
 function addNotam(){
-  const inp=document.getElementById('notam-input');
-  const locInp=document.getElementById('notam-loc');
-  const code=inp.value.trim().toUpperCase();
-  const loc=locInp ? locInp.value.trim() : '';
+  const inp=document.getElementById('notam-input'),locInp=document.getElementById('notam-loc');
+  const code=inp.value.trim().toUpperCase(),loc=locInp?locInp.value.trim():'';
   if(!code||notams.find(n=>n.code===code)){inp.value='';return;}
-  notams.push({
-    code,
-    loc,
-    time:new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})
-  });
-  saveNotams(); renderNotams(); inp.value=''; if(locInp) locInp.value='';
+  notams.push({code,loc,time:new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})});
+  saveNotams();renderNotams();inp.value='';if(locInp) locInp.value='';
 }
 function removeNotam(code){notams=notams.filter(n=>n.code!==code);saveNotams();renderNotams();}
 function renderNotams(){
@@ -1445,226 +1494,126 @@ function renderNotams(){
     </div>`).join('');
 }
 
-const GMAP_KEY = 'AIzaSyC6FIbAT7mT9sUY3W8H4VwMtQfGXURzu00';
-let searchTimer = null;
-let searchMarker = null;
+const GMAP_KEY='AIzaSyC6FIbAT7mT9sUY3W8H4VwMtQfGXURzu00';
+let searchTimer=null,searchMarker=null;
 
 function onSearchInput(val){
-  const clear = document.getElementById('search-clear');
-  clear.style.display = val ? 'block' : 'none';
+  const clear=document.getElementById('search-clear');
+  clear.style.display=val?'block':'none';
   clearTimeout(searchTimer);
-  if(val.length < 2){ hideResults(); return; }
-  searchTimer = setTimeout(()=>geocodeSearch(val), 400);
+  if(val.length<2){hideResults();return;}
+  searchTimer=setTimeout(()=>geocodeSearch(val),400);
 }
-
 function onSearchKey(e){
-  if(e.key === 'Escape') clearSearch();
-  if(e.key === 'Enter'){
-    clearTimeout(searchTimer);
-    geocodeSearch(document.getElementById('search-input').value);
-  }
+  if(e.key==='Escape') clearSearch();
+  if(e.key==='Enter'){clearTimeout(searchTimer);geocodeSearch(document.getElementById('search-input').value);}
 }
-
 async function geocodeSearch(query){
   try{
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&region=tw&language=zh-TW&key=${GMAP_KEY}`;
-    const d = await(await fetch(url)).json();
-    if(d.status !== 'OK' || !d.results.length){ hideResults(); return; }
+    const url=`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&region=tw&language=zh-TW&key=${GMAP_KEY}`;
+    const d=await(await fetch(url)).json();
+    if(d.status!=='OK'||!d.results.length){hideResults();return;}
     showResults(d.results.slice(0,5));
-  }catch(e){ hideResults(); }
+  }catch(e){hideResults();}
 }
-
 function showResults(results){
-  const el = document.getElementById('search-results');
-  el.style.display = 'block';
-  el.innerHTML = results.map((r,i)=>{
-    // Use formatted_address split for better name display
-    const parts = r.formatted_address.split(',');
-    const main = parts.slice(0, 2).join(',').trim();
-    const sub  = parts.slice(2).join(',').trim() || r.formatted_address;
-    return `<div class="search-item" onclick="selectResult(${r.geometry.location.lat},${r.geometry.location.lng},'${r.formatted_address.replace(/'/g,"\\'")}')">
-      <div>${main}</div>
-      <div class="search-item-sub">${sub}</div>
+  const el=document.getElementById('search-results');
+  el.style.display='block';
+  el.innerHTML=results.map(r=>{
+    const parts=r.formatted_address.split(',');
+    const main=parts.slice(0,2).join(',').trim(),sub=parts.slice(2).join(',').trim()||r.formatted_address;
+    return`<div class="search-item" onclick="selectResult(${r.geometry.location.lat},${r.geometry.location.lng},'${r.formatted_address.replace(/'/g,"\\'")}')">
+      <div>${main}</div><div class="search-item-sub">${sub}</div>
     </div>`;
   }).join('');
 }
-
-function hideResults(){
-  document.getElementById('search-results').style.display = 'none';
-}
-
-function selectResult(rlat, rlng, name){
-  hideResults();
-  document.getElementById('search-input').value = name;
-
-  // Remove previous search marker
+function hideResults(){document.getElementById('search-results').style.display='none';}
+function selectResult(rlat,rlng,name){
+  hideResults();document.getElementById('search-input').value=name;
   if(searchMarker) map.removeLayer(searchMarker);
-
-  // Add pin marker — blue circleMarker
-  searchMarker = L.circleMarker([rlat, rlng], {
-    radius:8, fillColor:'#50a0ff', fillOpacity:1, color:'#fff', weight:2
-  }).addTo(map).bindPopup(`<b>${name}</b>`).openPopup();
-
-  map.setView([rlat, rlng], 14);
-
-  // Also update sun info to searched location
-  lat = rlat; lng = rlng;
-  updateSun();
-  fetchWeather();
-  setGPS(`${rlat.toFixed(4)}, ${rlng.toFixed(4)}`,'g');
+  searchMarker=L.circleMarker([rlat,rlng],{radius:8,fillColor:'#50a0ff',fillOpacity:1,color:'#fff',weight:2}).addTo(map).bindPopup(`<b>${name}</b>`).openPopup();
+  map.setView([rlat,rlng],14);
+  lat=rlat;lng=rlng;
+  updateSun();fetchWeather();setGPS(`${rlat.toFixed(4)}, ${rlng.toFixed(4)}`,'g');
 }
-
 function clearSearch(){
-  document.getElementById('search-input').value = '';
-  document.getElementById('search-clear').style.display = 'none';
+  document.getElementById('search-input').value='';
+  document.getElementById('search-clear').style.display='none';
   hideResults();
-  if(searchMarker){ map.removeLayer(searchMarker); searchMarker = null; }
+  if(searchMarker){map.removeLayer(searchMarker);searchMarker=null;}
 }
-
-// Close results when clicking outside
-document.addEventListener('click', e=>{
-  if(!document.getElementById('search-wrap')?.contains(e.target)) hideResults();
-});
+document.addEventListener('click',e=>{if(!document.getElementById('search-wrap')?.contains(e.target)) hideResults();});
 
 // ── RESIZER ──
 (function(){
-  const MIN_COL = 160; // minimum column width px
-  const STORAGE_KEY = 'ka_col_widths';
-
-  function isLandscape(){ return window.innerWidth > window.innerHeight; }
-
-  function getApp(){ return document.getElementById('app'); }
-
-  // Parse current grid cols → [w1, w2, w3] in px
-  function getCols(){
-    const cols = getComputedStyle(getApp()).gridTemplateColumns.split(' ');
-    // cols = [w1, '5px', w2, '5px', w3]
-    return [parseFloat(cols[0]), parseFloat(cols[2]), parseFloat(cols[4])];
+  const MIN_COL=160,STORAGE_KEY='ka_col_widths';
+  function isLandscape(){return window.innerWidth>window.innerHeight;}
+  function getApp(){return document.getElementById('app');}
+  function getCols(){const cols=getComputedStyle(getApp()).gridTemplateColumns.split(' ');return[parseFloat(cols[0]),parseFloat(cols[2]),parseFloat(cols[4])];}
+  function setCols(w1,w2,w3){
+    getApp().style.gridTemplateColumns=`${w1}px 5px ${w2}px 5px ${w3}px`;
+    if(typeof map!=='undefined'&&map) map.invalidateSize();
+    localStorage.setItem(STORAGE_KEY,JSON.stringify([w1,w2,w3]));
   }
-
-  function setCols(w1, w2, w3){
-    getApp().style.gridTemplateColumns = `${w1}px 5px ${w2}px 5px ${w3}px`;
-    // notify map to resize
-    if(typeof map !== 'undefined' && map) map.invalidateSize();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([w1, w2, w3]));
-  }
-
-  // Restore saved widths on load
   function restoreWidths(){
     if(!isLandscape()) return;
     try{
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if(saved && saved.length === 3){
-        const total = window.innerWidth - 10; // 2 resizers × 5px
-        // scale to current viewport if window size changed
-        const savedTotal = saved[0] + saved[1] + saved[2];
-        const scale = total / savedTotal;
-        setCols(
-          Math.max(MIN_COL, Math.round(saved[0] * scale)),
-          Math.max(MIN_COL, Math.round(saved[1] * scale)),
-          Math.max(MIN_COL, Math.round(saved[2] * scale))
-        );
+      const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if(saved&&saved.length===3){
+        const total=window.innerWidth-10,savedTotal=saved[0]+saved[1]+saved[2],scale=total/savedTotal;
+        setCols(Math.max(MIN_COL,Math.round(saved[0]*scale)),Math.max(MIN_COL,Math.round(saved[1]*scale)),Math.max(MIN_COL,Math.round(saved[2]*scale)));
       }
     }catch(e){}
   }
-
-  function initResizer(resizerId, colIndex){
-    const el = document.getElementById(resizerId);
-    if(!el) return;
-
-    let startX, startCols;
-
-    function onStart(clientX){
-      if(!isLandscape()) return;
-      startX = clientX;
-      startCols = getCols();
-      el.classList.add('dragging');
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-    }
-
+  function initResizer(resizerId,colIndex){
+    const el=document.getElementById(resizerId); if(!el) return;
+    let startX,startCols;
+    function onStart(clientX){if(!isLandscape()) return;startX=clientX;startCols=getCols();el.classList.add('dragging');document.body.style.cursor='col-resize';document.body.style.userSelect='none';}
     function onMove(clientX){
-      if(startX === undefined) return;
-      const dx = clientX - startX;
-      let [w1, w2, w3] = startCols;
-      const total = w1 + w2 + w3;
-
-      if(colIndex === 0){
-        // resizer-1: between col1 and col2
-        w1 = Math.max(MIN_COL, Math.min(total - MIN_COL*2, w1 + dx));
-        w2 = Math.max(MIN_COL, total - w1 - w3);
-      } else {
-        // resizer-2: between col2 and col3
-        w3 = Math.max(MIN_COL, Math.min(total - MIN_COL*2, w3 - dx));
-        w2 = Math.max(MIN_COL, total - w1 - w3);
-      }
-      setCols(w1, w2, w3);
+      if(startX===undefined) return;
+      const dx=clientX-startX;let[w1,w2,w3]=startCols;const total=w1+w2+w3;
+      if(colIndex===0){w1=Math.max(MIN_COL,Math.min(total-MIN_COL*2,w1+dx));w2=Math.max(MIN_COL,total-w1-w3);}
+      else{w3=Math.max(MIN_COL,Math.min(total-MIN_COL*2,w3-dx));w2=Math.max(MIN_COL,total-w1-w3);}
+      setCols(w1,w2,w3);
     }
-
-    function onEnd(){
-      startX = undefined;
-      el.classList.remove('dragging');
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    }
-
-    // Mouse
-    el.addEventListener('mousedown', e=>{ e.preventDefault(); onStart(e.clientX); });
-    document.addEventListener('mousemove', e=>{ if(startX!==undefined) onMove(e.clientX); });
-    document.addEventListener('mouseup', onEnd);
-
-    // Touch
-    el.addEventListener('touchstart', e=>{ e.preventDefault(); onStart(e.touches[0].clientX); }, {passive:false});
-    document.addEventListener('touchmove', e=>{ if(startX!==undefined){ e.preventDefault(); onMove(e.touches[0].clientX); } }, {passive:false});
-    document.addEventListener('touchend', onEnd);
+    function onEnd(){startX=undefined;el.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect='';}
+    el.addEventListener('mousedown',e=>{e.preventDefault();onStart(e.clientX);});
+    document.addEventListener('mousemove',e=>{if(startX!==undefined) onMove(e.clientX);});
+    document.addEventListener('mouseup',onEnd);
+    el.addEventListener('touchstart',e=>{e.preventDefault();onStart(e.touches[0].clientX);},{passive:false});
+    document.addEventListener('touchmove',e=>{if(startX!==undefined){e.preventDefault();onMove(e.touches[0].clientX);}},{passive:false});
+    document.addEventListener('touchend',onEnd);
   }
-
-  // Double-click resizer → reset to default
   function initDoubleClick(resizerId){
-    document.getElementById(resizerId)?.addEventListener('dblclick', ()=>{
+    document.getElementById(resizerId)?.addEventListener('dblclick',()=>{
       localStorage.removeItem(STORAGE_KEY);
-      getApp().style.gridTemplateColumns = '';
-      setTimeout(()=>{ if(typeof map!=='undefined'&&map) map.invalidateSize(); }, 100);
+      getApp().style.gridTemplateColumns='';
+      setTimeout(()=>{if(typeof map!=='undefined'&&map) map.invalidateSize();},100);
     });
   }
-
-  window.addEventListener('load', ()=>{
-    initResizer('resizer-1', 0);
-    initResizer('resizer-2', 1);
-    initDoubleClick('resizer-1');
-    initDoubleClick('resizer-2');
-    setTimeout(restoreWidths, 200);
+  window.addEventListener('load',()=>{
+    initResizer('resizer-1',0);initResizer('resizer-2',1);
+    initDoubleClick('resizer-1');initDoubleClick('resizer-2');
+    setTimeout(restoreWidths,200);
   });
-
-  // Re-apply on orientation change
-  window.addEventListener('resize', ()=>{
-    if(isLandscape()) setTimeout(restoreWidths, 350);
-  });
+  window.addEventListener('resize',()=>{if(isLandscape()) setTimeout(restoreWidths,350);});
 })();
 
-// ── THEME TOGGLE ──
+// ── THEME ──
 function toggleTheme(){
-  const isLight = document.body.classList.toggle('light');
-  document.getElementById('theme-btn').textContent = isLight ? '🌙' : '☀️';
-  localStorage.setItem('ka_theme', isLight ? 'light' : 'dark');
-  // 切換地圖底圖
+  const isLight=document.body.classList.toggle('light');
+  document.getElementById('theme-btn').textContent=isLight?'🌙':'☀️';
+  localStorage.setItem('ka_theme',isLight?'light':'dark');
   if(map){
-    map.eachLayer(l=>{ if(l._url) map.removeLayer(l); });
-    const tileUrl = isLight
-      ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    map.eachLayer(l=>{if(l._url) map.removeLayer(l);});
+    const tileUrl=isLight?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     L.tileLayer(tileUrl,{maxZoom:19}).addTo(map);
   }
 }
-
 function initTheme(){
-  const saved = localStorage.getItem('ka_theme');
-  if(saved === 'light'){
-    document.body.classList.add('light');
-    document.getElementById('theme-btn').textContent = '🌙';
-  }
+  const saved=localStorage.getItem('ka_theme');
+  if(saved==='light'){document.body.classList.add('light');document.getElementById('theme-btn').textContent='🌙';}
 }
-
 
 // ── INIT ──
 window.addEventListener('load',()=>{
