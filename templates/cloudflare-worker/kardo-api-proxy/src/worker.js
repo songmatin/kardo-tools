@@ -13,7 +13,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
-    const allowedOrigin = getAllowedOrigin(origin, env);
+    const allowedOrigin = getAllowedOrigin(origin, env, url);
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders(allowedOrigin) });
@@ -51,13 +51,16 @@ export default {
   },
 };
 
-function getAllowedOrigin(origin, env) {
+function getAllowedOrigin(origin, env, url) {
   const configured = String(env.ALLOWED_ORIGINS || '')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
   const allowed = configured.length ? configured : DEFAULT_ALLOWED_ORIGINS;
-  return allowed.includes(origin) ? origin : '';
+  if (origin) return allowed.includes(origin) ? origin : '';
+
+  const sameHostOrigin = `${url.protocol}//${url.host}`;
+  return allowed.includes(sameHostOrigin) ? sameHostOrigin : '';
 }
 
 function corsHeaders(origin) {

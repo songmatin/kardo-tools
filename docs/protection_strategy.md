@@ -22,6 +22,7 @@
 | Content Security Policy | `index.html` | 限制可載入與可連線的來源。 |
 | Worker 代理範本 | `templates/cloudflare-worker/` | 作為 API key 搬遷與來源限制的基礎。 |
 | API proxy 切換開關 | `config/public-config.js` | Worker 部署前保持 fallback，部署後切換到自家 endpoint。 |
+| Worker 部署計畫 | `docs/cloudflare_worker_deployment.md` | 定義部署、驗證與切換順序。 |
 
 ## 仍需要的第二層防護
 

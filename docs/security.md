@@ -49,3 +49,11 @@ Google Cloud Console 中建議設定：
 2. 對外部 API 回應加上短時間快取。
 3. 對錯誤回應提供一致格式。
 4. 避免把上游完整錯誤與 key 資訊回傳給前端。
+
+## Worker 部署文件
+
+Cloudflare Worker proxy 的部署流程請參考：
+
+```text
+docs/cloudflare_worker_deployment.md
+```

@@ -28,6 +28,40 @@ wrangler secret put UPSTREAM_AQI_URL
 https://tools.songmatin.com,http://localhost:8000
 ```
 
+## 安裝與部署
+
+第一次部署前，在此資料夾執行：
+
+```bash
+npm install
+npx wrangler login
+npm run check
+```
+
+設定 secrets：
+
+```bash
+npx wrangler secret put CWA_API_KEY
+npx wrangler secret put AIRLABS_API_KEY
+npx wrangler secret put GOOGLE_MAPS_API_KEY
+npx wrangler secret put UPSTREAM_RADAR_URL
+npx wrangler secret put UPSTREAM_AQI_URL
+```
+
+部署到 Cloudflare：
+
+```bash
+npm run deploy
+```
+
+若 `songmatin.com` 由 Cloudflare DNS 管理，測試通過後可在 `wrangler.toml` 啟用：
+
+```toml
+routes = [
+  { pattern = "tools.songmatin.com/api/*", zone_name = "songmatin.com" }
+]
+```
+
 ## 路由
 
 | 路由 | 用途 |

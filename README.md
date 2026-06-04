@@ -63,6 +63,7 @@ http://localhost:8000
 docs/configuration.md
 docs/security.md
 docs/protection_strategy.md
+docs/cloudflare_worker_deployment.md
 docs/refactor_roadmap.md
 ```
 
