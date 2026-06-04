@@ -70,7 +70,8 @@ button{border:none;border-radius:8px;background:var(--accent);color:#111;padding
 <script src="notam-data.js"></script>
 <script>
 const data=window.KARDO_NOTAM_DATA;
-document.getElementById('updated').textContent=`最後更新：${data.updatedAt} · 本地資料模型`;
+const sourceLabel=data.source?.mode==='official-text-import'?'官方原文匯入':'本地資料模型';
+document.getElementById('updated').textContent=`最後更新：${data.updatedAt} · ${sourceLabel}`;
 document.getElementById('airport-grid').innerHTML=data.airports.map(ap=>`
   <a class="airport" href="map.html?icao=${encodeURIComponent(ap.icao)}&name=${encodeURIComponent(ap.name)}">
     <div class="icao">${ap.icao}</div>

@@ -1,5 +1,9 @@
 window.KARDO_NOTAM_DATA = {
   updatedAt: '2026-06-05 06:30',
+  source: {
+    mode: 'demo',
+    note: '示範資料。正式使用前請以官方 AIS / AES NOTAM 為準。'
+  },
   airports: [
     { icao: 'RCSS', name: 'RCSS 松山', city: '台北', lat: 25.0694, lng: 121.5521 },
     { icao: 'RCTP', name: 'RCTP 桃園', city: '桃園', lat: 25.0777, lng: 121.2327 },
