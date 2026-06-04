@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
 <meta name="googlebot" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
 <meta name="referrer" content="same-origin">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://static.wixstatic.com https://unpkg.com https://*.basemaps.cartocdn.com https://cool-dew-3b6d.songmatin-2e5.workers.dev; connect-src 'self' https://raw.githubusercontent.com https://api.open-meteo.com https://opendata.cwa.gov.tw https://airlabs.co https://maps.googleapis.com https://cool-dew-3b6d.songmatin-2e5.workers.dev; worker-src 'self' blob: https://cdnjs.cloudflare.com; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://static.wixstatic.com https://unpkg.com https://*.basemaps.cartocdn.com https://cool-dew-3b6d.songmatin-2e5.workers.dev https://kardo-api-proxy.songmatin-2e5.workers.dev; connect-src 'self' https://raw.githubusercontent.com https://api.open-meteo.com https://opendata.cwa.gov.tw https://airlabs.co https://maps.googleapis.com https://cool-dew-3b6d.songmatin-2e5.workers.dev https://kardo-api-proxy.songmatin-2e5.workers.dev; worker-src 'self' blob: https://cdnjs.cloudflare.com; upgrade-insecure-requests">
 <title>飛行儀表板 — Kardo Aerial</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -1281,12 +1281,13 @@ function renderWindAlt(ws){
   document.getElementById('drone-table').innerHTML=dt;
 }
 
-const CWA_KEY='CWA-88714A94-2A9A-4B48-B5E4-E7595BDF48D9';
+const CWA_KEY='';
 async function fetchTides(){
   if(!lat||!lng) return;
   const tideDisc=document.getElementById('tide-disc');
   try{
-    const url=proxyUrl('/api/tides') || `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&format=JSON`;
+    const url=proxyUrl('/api/tides') || (CWA_KEY ? `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&format=JSON` : '');
+    if(!url) throw new Error('missing proxy');
     const res=await fetch(url);
     const json=await res.json();
     const forecasts=json?.records?.TideForecasts;
@@ -1331,7 +1332,7 @@ async function fetchTides(){
   }
 }
 
-const AIR='3c10eb91-993a-4100-a3b3-e0cd809b2df6';
+const AIR='';
 const AP_IATA={RCSS:'TSA',RCTP:'TPE',RCGM:'HSZ',RCMQ:'RMQ',RCNN:'TNN',RCKH:'KHH'};
 let activeApIdx=0,flightTimer=null;
 
@@ -1364,8 +1365,8 @@ async function fetchFlights(){
   if(btn) btn.disabled=true;
   try{
     const[arr,dep]=await Promise.all([
-      fetch(proxyUrl('/api/flights',{iata,kind:'arr'}) || `https://airlabs.co/api/v9/schedules?arr_iata=${iata}&api_key=${AIR}`).then(r=>r.json()),
-      fetch(proxyUrl('/api/flights',{iata,kind:'dep'}) || `https://airlabs.co/api/v9/schedules?dep_iata=${iata}&api_key=${AIR}`).then(r=>r.json()),
+      fetch(proxyUrl('/api/flights',{iata,kind:'arr'}) || (AIR ? `https://airlabs.co/api/v9/schedules?arr_iata=${iata}&api_key=${AIR}` : '')).then(r=>r.json()),
+      fetch(proxyUrl('/api/flights',{iata,kind:'dep'}) || (AIR ? `https://airlabs.co/api/v9/schedules?dep_iata=${iata}&api_key=${AIR}` : '')).then(r=>r.json()),
     ]);
     const all=[...(arr.response||[]).map(f=>({...f,dir:'arr'})),...(dep.response||[]).map(f=>({...f,dir:'dep'}))];
     const now=new Date();
@@ -1510,7 +1511,7 @@ function renderNotams(){
     </div>`).join('');
 }
 
-const GMAP_KEY='AIzaSyC6FIbAT7mT9sUY3W8H4VwMtQfGXURzu00';
+const GMAP_KEY='';
 let searchTimer=null,searchMarker=null;
 
 function onSearchInput(val){
@@ -1526,7 +1527,8 @@ function onSearchKey(e){
 }
 async function geocodeSearch(query){
   try{
-    const url=proxyUrl('/api/geocode',{address:query}) || `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&region=tw&language=zh-TW&key=${GMAP_KEY}`;
+    const url=proxyUrl('/api/geocode',{address:query}) || (GMAP_KEY ? `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&region=tw&language=zh-TW&key=${GMAP_KEY}` : '');
+    if(!url) throw new Error('missing proxy');
     const d=await(await fetch(url)).json();
     if(d.status!=='OK'||!d.results.length){hideResults();return;}
     showResults(d.results.slice(0,5));

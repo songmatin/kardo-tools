@@ -1,5 +1,4 @@
 window.KARDO_CONFIG = {
-  // Keep empty until the Cloudflare Worker is deployed.
-  // Recommended production value: 'https://tools.songmatin.com'
-  apiProxyBase: '',
+  // Worker proxy for API calls that require protected keys.
+  apiProxyBase: 'https://kardo-api-proxy.songmatin-2e5.workers.dev',
 };

@@ -54,14 +54,20 @@ npm run deploy
 | Account ID | `2e5a7e99e427531125e57e13bc325382` |
 | Worker 名稱 | `kardo-api-proxy` |
 | workers.dev URL | `https://kardo-api-proxy.songmatin-2e5.workers.dev` |
-| Version ID | `2a977408-0266-489f-ad70-fde0ccf3398d` |
-| 狀態 | 已部署，尚未切換正式前端流量。 |
+| Version ID | `f7ccc27b-24ea-4e50-8bc9-d714a9434d8d` |
+| 狀態 | 已部署，前端已切換到 workers.dev proxy。 |
 
 目前 `wrangler.toml` 保留 `workers_dev = true` 作為測試入口，並設定 `preview_urls = false` 減少額外預覽網址。
 
 ## 路由策略
 
-若 `songmatin.com` 由 Cloudflare DNS 管理，建議使用：
+目前前端先使用 workers.dev 入口：
+
+```text
+https://kardo-api-proxy.songmatin-2e5.workers.dev
+```
+
+若 `songmatin.com` 由 Cloudflare DNS 管理，後續建議使用：
 
 ```text
 https://tools.songmatin.com/api/*
@@ -116,8 +122,10 @@ node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync('/tmp/kardo-
 
 1. 先部署 Worker，不改前端設定。
 2. 測試 `/api/*` 全部正常。
-3. 再修改 `config/public-config.js` 的 `apiProxyBase`。
+3. 修改 `config/public-config.js` 的 `apiProxyBase`。
 4. 本機與正式站檢查無誤後，再提交與推送。
+
+目前已完成第 3 步，`apiProxyBase` 已指向 workers.dev proxy。下一階段是將 Cloudflare route 綁定到 `tools.songmatin.com/api/*`，讓前端可改回同網域呼叫。
 
 ## 注意事項
 
