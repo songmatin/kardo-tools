@@ -10,3 +10,6 @@
 *.log
 tmp/
 temp/
+
+# Dependencies
+node_modules/
