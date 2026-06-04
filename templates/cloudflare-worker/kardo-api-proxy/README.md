@@ -39,3 +39,19 @@ https://tools.songmatin.com,http://localhost:8000
 | `/api/aqi` | 空品資料代理。 |
 
 此範本尚未接入前端。部署前應先在 Cloudflare 測試，再逐步替換 `index.html` 中的直接 API 呼叫。
+
+## 前端切換
+
+前端已支援 `config/public-config.js`。Worker 部署並綁定正式網域後，將：
+
+```js
+apiProxyBase: ''
+```
+
+改為：
+
+```js
+apiProxyBase: 'https://tools.songmatin.com'
+```
+
+即可讓支援的 API 優先走 Worker proxy。若 Worker 未部署或設定為空，前端會沿用原本的外部 API fallback。

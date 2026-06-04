@@ -3,8 +3,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:8000',
 ];
 
-const JSON_HEADERS = {
-  'Content-Type': 'application/json; charset=utf-8',
+const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'same-origin',
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
@@ -63,7 +62,7 @@ function getAllowedOrigin(origin, env) {
 
 function corsHeaders(origin) {
   return {
-    ...JSON_HEADERS,
+    ...SECURITY_HEADERS,
     'Access-Control-Allow-Origin': origin || 'null',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -86,7 +85,8 @@ function json(payload, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
-      ...JSON_HEADERS,
+      'Content-Type': 'application/json; charset=utf-8',
+      ...SECURITY_HEADERS,
       ...extraHeaders,
     },
   });

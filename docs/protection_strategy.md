@@ -21,6 +21,7 @@
 | Referrer 限制 | `index.html` | 降低外部網址取得完整來源資訊。 |
 | Content Security Policy | `index.html` | 限制可載入與可連線的來源。 |
 | Worker 代理範本 | `templates/cloudflare-worker/` | 作為 API key 搬遷與來源限制的基礎。 |
+| API proxy 切換開關 | `config/public-config.js` | Worker 部署前保持 fallback，部署後切換到自家 endpoint。 |
 
 ## 仍需要的第二層防護
 
@@ -31,6 +32,12 @@
 | 中央氣象署 key | 移到 Cloudflare Worker，並加上快取。 |
 | Cloudflare Worker | 加入來源檢查、快取、錯誤格式與 WAF 規則。 |
 | GitHub repo | 若不希望程式碼公開，需改為 private repo；公開 repo 無法防止複製。 |
+
+## 前端切換策略
+
+目前 `index.html` 已支援 `config/public-config.js` 的 `apiProxyBase` 設定。當值為空字串時，前端仍會走原本外部 API。當值改成正式網域時，雷達、空品、潮汐、航班與地址搜尋會優先呼叫自家 Worker proxy。
+
+這種設計可降低部署風險，避免 Worker 尚未完成時造成儀表板中斷。
 
 ## Cloudflare 建議設定
 
