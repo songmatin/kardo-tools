@@ -99,7 +99,8 @@ async function cachedFetch(url, ctx, ttlSeconds) {
   const cache = caches.default;
   const cacheKey = new Request(url, { method: 'GET' });
   const hit = await cache.match(cacheKey);
-  if (hit) return hit;
+  if (hit?.ok) return hit;
+  if (hit) ctx.waitUntil(cache.delete(cacheKey));
 
   const response = await fetch(url, {
     headers: {
