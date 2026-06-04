@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>NOTAM 地圖 — Kardo Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#151413;--panel:rgba(24,23,22,.94);--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.12);--text:rgba(255,255,255,.88);--muted:rgba(255,255,255,.55);--accent:#b8965a;--blue:#50a0ff;--red:#ff4f41;--green:#32d264;--orange:#ff9f0a;--mono:'Courier New',monospace;--sans:'DM Sans',sans-serif;--serif:'Noto Serif TC',serif}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+#map{position:fixed;inset:0;z-index:0}.leaflet-tile{filter:brightness(.62) saturate(.7)}
+.top{position:fixed;top:14px;left:14px;right:14px;z-index:20;display:flex;align-items:center;gap:10px;pointer-events:none}
+.btn,.title{pointer-events:auto;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px);border-radius:9px}
+.btn{padding:9px 12px;color:var(--muted);font-size:13px;text-decoration:none}
+.title{padding:10px 14px;min-width:0}.title h1{font-family:var(--serif);font-size:20px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.title div{font-size:11px;color:var(--muted);margin-top:2px}
+.panel{position:fixed;right:14px;top:86px;bottom:14px;width:min(390px,calc(100vw - 28px));z-index:18;background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(20px);display:flex;flex-direction:column;overflow:hidden}
+.panel-head{padding:15px 16px;border-bottom:1px solid var(--line)}.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}.panel-title{font-size:16px;font-weight:600}.panel-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6}
+.tools{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+input{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px 11px;outline:none}
+button{border:none;border-radius:8px;background:var(--accent);color:#111;font-weight:700;padding:0 12px;cursor:pointer}
+.list{overflow:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.notice{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px}.notice.active{border-color:rgba(50,210,100,.35)}.notice.planned{border-color:rgba(255,159,10,.38)}
+.notice-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.id{font-family:var(--mono);color:var(--blue);font-weight:700}.tag{font-size:10px;border-radius:999px;padding:3px 7px;background:rgba(255,255,255,.08);color:var(--muted)}
+.notice h3{font-size:14px;margin:8px 0 6px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px;color:var(--muted);line-height:1.5}.summary{font-size:12px;color:rgba(255,255,255,.72);line-height:1.7;margin-top:8px}
+.empty{padding:20px;color:var(--muted);font-size:13px;line-height:1.8;text-align:center}
+.coord-hit{color:var(--green);font-size:12px;margin-top:8px}.coord-miss{color:var(--orange);font-size:12px;margin-top:8px}
+@media(max-width:760px){.top{left:10px;right:10px;top:10px}.title h1{font-size:17px}.panel{left:10px;right:10px;top:auto;bottom:10px;width:auto;max-height:46vh}.tools{grid-template-columns:1fr}.tools button{padding:10px 12px}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="top">
+  <a class="btn" href="./">返回</a>
+  <div class="title"><h1 id="page-title">載入中...</h1><div id="page-sub">讀取 NOTAM 資料</div></div>
+</div>
+<aside class="panel">
+  <div class="panel-head">
+    <div class="eyebrow">NOTAM Airspace</div>
+    <div class="panel-title" id="panel-title">公告清單</div>
+    <div class="panel-sub" id="panel-sub">本頁為本地資料模型，正式飛行前請以官方 NOTAM 為準。</div>
+  </div>
+  <div class="tools">
+    <input id="coord-input" placeholder="座標查詢：25.037, 121.517">
+    <button onclick="queryCoord()">查詢</button>
+  </div>
+  <div class="list" id="notice-list"></div>
+</aside>
+<script src="notam-data.js"></script>
+<script>
+const params=new URLSearchParams(location.search);
+const data=window.KARDO_NOTAM_DATA;
+const icao=params.get('icao');
+const latParam=parseFloat(params.get('lat'));
+const lngParam=parseFloat(params.get('lng'));
+const airport=data.airports.find(a=>a.icao===icao);
+const hasCoord=Number.isFinite(latParam)&&Number.isFinite(lngParam);
+const center=hasCoord?[latParam,lngParam]:airport?[airport.lat,airport.lng]:[23.7,121.0];
+const title=params.get('name') || airport?.name || 'NOTAM 地圖';
+document.getElementById('page-title').textContent=title;
+document.getElementById('page-sub').textContent=`最後更新：${data.updatedAt}`;
+document.getElementById('panel-title').textContent=hasCoord?'座標命中結果':`${title} 公告`;
+
+const map=L.map('map',{center,zoom:hasCoord?13:airport?.icao==='RCAA'?7:12,zoomControl:true,attributionControl:false});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+const notices=hasCoord?data.notices:data.notices.filter(n=>!icao||n.icao===icao);
+const layers=[];
+notices.forEach(n=>drawNotice(n));
+if(layers.length&&!hasCoord){
+  const group=L.featureGroup(layers);
+  map.fitBounds(group.getBounds().pad(.22));
+}
+if(airport&&!hasCoord){
+  L.circleMarker([airport.lat,airport.lng],{radius:6,color:'#fff',weight:2,fillColor:'#50a0ff',fillOpacity:1}).addTo(map).bindPopup(airport.name);
+}
+let coordMarker=null;
+if(hasCoord) runCoordQuery(latParam,lngParam);
+else renderList(notices);
+
+function drawNotice(n){
+  const color=n.status==='active'?'#32d264':'#ff9f0a';
+  let layer;
+  if(n.type==='circle'){
+    layer=L.circle(n.center,{radius:n.radius,color,weight:2,fillColor:color,fillOpacity:.14});
+  }else{
+    layer=L.polygon(n.points,{color,weight:2,fillColor:color,fillOpacity:.14});
+  }
+  layer.addTo(map).bindPopup(`<b>${n.id}</b><br>${n.title}<br>${n.lower}-${n.upper}`);
+  layers.push(layer);
+}
+function renderList(items,hitIds=[]){
+  const el=document.getElementById('notice-list');
+  if(!items.length){el.innerHTML='<div class="empty">目前沒有可顯示的本地 NOTAM 資料。</div>';return;}
+  el.innerHTML=items.map(n=>`
+    <article class="notice ${n.status}">
+      <div class="notice-top"><div class="id">${n.id}</div><div class="tag">${n.status==='active'?'生效中':'預告'}</div></div>
+      <h3>${n.title}</h3>
+      <div class="meta"><div>時間：${n.start}</div><div>至：${n.end}</div><div>高度：${n.lower}-${n.upper}</div><div>範圍：${n.type==='circle'?Math.round(n.radius)+'m':'多邊形'}</div></div>
+      <div class="summary">${n.summary}</div>
+      ${hitIds.includes(n.id)?'<div class="coord-hit">座標落在此公告範圍內</div>':''}
+    </article>`).join('');
+}
+function parseCoord(input){
+  const raw=input.trim();
+  const dec=raw.match(/(-?\d+(?:\.\d+)?)\s*[,， ]\s*(-?\d+(?:\.\d+)?)/);
+  return dec?{lat:parseFloat(dec[1]),lng:parseFloat(dec[2])}:null;
+}
+function queryCoord(){
+  const pt=parseCoord(document.getElementById('coord-input').value);
+  if(!pt){alert('請輸入有效十進位座標');return;}
+  runCoordQuery(pt.lat,pt.lng);
+}
+function runCoordQuery(lat,lng){
+  if(coordMarker) map.removeLayer(coordMarker);
+  coordMarker=L.circleMarker([lat,lng],{radius:8,color:'#fff',weight:2,fillColor:'#50a0ff',fillOpacity:1}).addTo(map).bindPopup('查詢座標').openPopup();
+  map.setView([lat,lng],13);
+  const hits=data.notices.filter(n=>contains(n,lat,lng));
+  document.getElementById('panel-title').textContent='座標命中結果';
+  document.getElementById('panel-sub').innerHTML=hits.length?`查詢座標 ${lat.toFixed(5)}, ${lng.toFixed(5)} 命中 ${hits.length} 筆公告。`:`查詢座標 ${lat.toFixed(5)}, ${lng.toFixed(5)} 未命中本地公告範圍。`;
+  renderList(hits.length?hits:data.notices.slice(0,4),hits.map(h=>h.id));
+}
+function contains(n,lat,lng){
+  if(n.type==='circle') return distanceMeters(lat,lng,n.center[0],n.center[1])<=n.radius;
+  return pointInPolygon([lat,lng],n.points);
+}
+function distanceMeters(a,b,c,d){
+  const R=6371000,toRad=x=>x*Math.PI/180;
+  const dLat=toRad(c-a),dLng=toRad(d-b);
+  const s=Math.sin(dLat/2)**2+Math.cos(toRad(a))*Math.cos(toRad(c))*Math.sin(dLng/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));
+}
+function pointInPolygon(point,poly){
+  const x=point[1],y=point[0];
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i][1],yi=poly[i][0],xj=poly[j][1],yj=poly[j][0];
+    const intersect=((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi);
+    if(intersect) inside=!inside;
+  }
+  return inside;
+}
+</script>
+</body>
+</html>

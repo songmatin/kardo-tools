@@ -325,6 +325,9 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 #notam-loc::placeholder{color:var(--w30);font-size:10px;}
 #notam-add{grid-column:2;grid-row:1/3;align-self:stretch;background:var(--accent);border:none;border-radius:var(--r-sm);color:#000;font-size:16px;font-weight:700;padding:0 12px;cursor:pointer;white-space:nowrap;}
 #notam-add:hover{opacity:.85;}
+.notam-query-link{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin:0 0 7px;padding:7px 10px;background:rgba(184,150,90,0.12);border:0.5px solid var(--accent-bd);border-radius:var(--r-sm);color:var(--accent);text-decoration:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase;}
+.notam-query-link span:last-child{font-family:var(--mono);font-size:12px;color:var(--w55);}
+.notam-query-link:hover{background:rgba(184,150,90,0.2);color:#ffd99a;}
 #notam-list{display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto;}
 .notam-item{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);padding:6px 10px;display:flex;align-items:center;gap:7px;}
 .n-code{font-family:var(--mono);color:var(--orange);font-weight:700;font-size:11px;letter-spacing:.06em;flex-shrink:0;}
@@ -597,6 +600,10 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 
     <div class="sec">
       <div class="sec-title">本日作業 · NOTAM</div>
+      <a class="notam-query-link" href="notam/">
+        <span>NOTAM 空域查詢</span>
+        <span>↗</span>
+      </a>
       <div class="notam-input-row">
         <input type="text" id="notam-input" placeholder="編號 U0857" maxlength="20"
                onkeydown="if(event.key==='Enter')document.getElementById('notam-loc').focus()">
