@@ -29,10 +29,12 @@ https://tools.songmatin.com/
 | `index.html` | 主要介面、樣式與 JavaScript。 |
 | `sw.js` | Service Worker 快取設定。 |
 | `CNAME` | GitHub Pages 自訂網域設定。 |
+| `robots.txt` | 降低一般搜尋引擎與 AI 爬蟲收錄。 |
 | `*.geojson` | 空域與限制區資料。 |
 | `.env.example` | 後續後台或代理服務使用的環境變數範本。 |
 | `.gitignore` | 排除本機暫存檔與真實環境變數。 |
-| `docs/` | 維護、設定、金鑰治理與重構規劃文件。 |
+| `docs/` | 維護、設定、金鑰治理、防爬與重構規劃文件。 |
+| `templates/` | 後端代理與部署範本。 |
 
 ## 本機預覽
 
@@ -59,6 +61,7 @@ http://localhost:8000
 ```text
 docs/configuration.md
 docs/security.md
+docs/protection_strategy.md
 docs/refactor_roadmap.md
 ```
 

@@ -1,0 +1,41 @@
+# Kardo API Proxy Worker
+
+此範本用於將前端目前直接呼叫的敏感 API 搬到 Cloudflare Worker。
+
+## 目的
+
+1. 避免 AirLabs、中央氣象署、Google Maps 等 key 長期暴露在前端。
+2. 統一來源限制，只允許 `tools.songmatin.com` 與本機測試網址呼叫。
+3. 對上游 API 加上快取，降低額度消耗。
+4. 提供一致的錯誤格式，方便前端判斷。
+
+## 需要設定的 secrets
+
+請使用 Cloudflare Wrangler 設定，不要寫入 repo：
+
+```bash
+wrangler secret put CWA_API_KEY
+wrangler secret put AIRLABS_API_KEY
+wrangler secret put GOOGLE_MAPS_API_KEY
+wrangler secret put ALLOWED_ORIGINS
+wrangler secret put UPSTREAM_RADAR_URL
+wrangler secret put UPSTREAM_AQI_URL
+```
+
+`ALLOWED_ORIGINS` 建議值：
+
+```text
+https://tools.songmatin.com,http://localhost:8000
+```
+
+## 路由
+
+| 路由 | 用途 |
+| --- | --- |
+| `/api/tides` | 中央氣象署潮汐資料代理。 |
+| `/api/flights?iata=TSA` | AirLabs 航班資料代理。 |
+| `/api/geocode?address=台北101` | Google Maps Geocoding 代理。 |
+| `/api/radar` | 雷達資料代理。 |
+| `/api/aqi` | 空品資料代理。 |
+
+此範本尚未接入前端。部署前應先在 Cloudflare 測試，再逐步替換 `index.html` 中的直接 API 呼叫。
