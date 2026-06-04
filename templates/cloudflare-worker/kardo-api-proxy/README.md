@@ -44,9 +44,9 @@ npm run check
 npx wrangler secret put CWA_API_KEY
 npx wrangler secret put AIRLABS_API_KEY
 npx wrangler secret put GOOGLE_MAPS_API_KEY
-npx wrangler secret put UPSTREAM_RADAR_URL
-npx wrangler secret put UPSTREAM_AQI_URL
 ```
+
+`UPSTREAM_RADAR_URL` 與 `UPSTREAM_AQI_URL` 已有 Worker 內建預設值，除非要更換上游，否則不必設定成 Secret。
 
 部署到 Cloudflare：
 

@@ -9,6 +9,11 @@ const SECURITY_HEADERS = {
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
 };
 
+const DEFAULT_UPSTREAMS = {
+  aqi: 'https://cool-dew-3b6d.songmatin-2e5.workers.dev',
+  radar: 'https://cool-dew-3b6d.songmatin-2e5.workers.dev?type=radar',
+};
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -153,6 +158,16 @@ async function proxyGeocode(url, env, ctx) {
 }
 
 async function proxyUpstream(upstreamUrl, type, ctx) {
-  if (!upstreamUrl) return json({ error: `missing_${type}_upstream` }, 500);
-  return cachedFetch(upstreamUrl, ctx, type === 'radar' ? 600 : 900);
+  const url = normalizeUpstreamUrl(upstreamUrl, DEFAULT_UPSTREAMS[type]);
+  if (!url) return json({ error: `missing_${type}_upstream` }, 500);
+  return cachedFetch(url, ctx, type === 'radar' ? 600 : 900);
+}
+
+function normalizeUpstreamUrl(value, fallback) {
+  const candidate = String(value || '').trim() || fallback;
+  try {
+    return new URL(candidate).toString();
+  } catch {
+    return fallback || '';
+  }
 }
