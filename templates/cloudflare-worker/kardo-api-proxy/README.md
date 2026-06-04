@@ -54,6 +54,18 @@ npx wrangler secret put UPSTREAM_AQI_URL
 npm run deploy
 ```
 
+目前測試入口：
+
+```text
+https://kardo-api-proxy.songmatin-2e5.workers.dev
+```
+
+終端機測試需使用 `curl`，不可直接輸入網址：
+
+```bash
+curl -i -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/tides"
+```
+
 若 `songmatin.com` 由 Cloudflare DNS 管理，測試通過後可在 `wrangler.toml` 啟用：
 
 ```toml

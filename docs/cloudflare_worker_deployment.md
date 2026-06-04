@@ -44,6 +44,21 @@ npx wrangler secret put UPSTREAM_AQI_URL
 npm run deploy
 ```
 
+## 目前部署狀態
+
+2026-06-04 已完成第一次部署。
+
+| 項目 | 內容 |
+| --- | --- |
+| Cloudflare 帳號 | `songmatin@hotmail.com` |
+| Account ID | `2e5a7e99e427531125e57e13bc325382` |
+| Worker 名稱 | `kardo-api-proxy` |
+| workers.dev URL | `https://kardo-api-proxy.songmatin-2e5.workers.dev` |
+| Version ID | `2a977408-0266-489f-ad70-fde0ccf3398d` |
+| 狀態 | 已部署，尚未切換正式前端流量。 |
+
+目前 `wrangler.toml` 保留 `workers_dev = true` 作為測試入口，並設定 `preview_urls = false` 減少額外預覽網址。
+
 ## 路由策略
 
 若 `songmatin.com` 由 Cloudflare DNS 管理，建議使用：
@@ -79,6 +94,18 @@ apiProxyBase: 'https://tools.songmatin.com'
 | `/api/aqi` | 回傳空品資料。 |
 | `/api/radar` | 回傳雷達影像或上游雷達資料。 |
 
+workers.dev 測試時，請帶上允許的 `Origin` header。範例：
+
+```bash
+curl -i -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/tides"
+curl -i -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/flights?iata=TSA&kind=arr"
+curl -i -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/geocode?address=%E5%8F%B0%E5%8C%97101"
+curl -i -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/aqi"
+curl -I -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/radar"
+```
+
+直接在終端機輸入網址會被 shell 當成指令，應使用 `curl` 或貼到瀏覽器網址列。
+
 ## 切換原則
 
 1. 先部署 Worker，不改前端設定。
@@ -89,3 +116,5 @@ apiProxyBase: 'https://tools.songmatin.com'
 ## 注意事項
 
 `robots.txt`、`noindex` 與 CSP 只能降低一般收錄與濫用風險。API key 必須移到 Worker Secrets，才算真正從前端移除。
+
+`Origin` 檢查與 CORS 是濫用風險控制，不是完整身份驗證。正式切換後仍建議搭配 Cloudflare WAF、Rate limiting 與快取規則。

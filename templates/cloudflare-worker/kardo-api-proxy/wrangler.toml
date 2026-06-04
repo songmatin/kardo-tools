@@ -1,6 +1,8 @@
 name = "kardo-api-proxy"
 main = "src/worker.js"
 compatibility_date = "2026-06-04"
+workers_dev = true
+preview_urls = false
 
 [vars]
 PUBLIC_SITE_URL = "https://tools.songmatin.com"
