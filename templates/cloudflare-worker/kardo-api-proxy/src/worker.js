@@ -108,8 +108,12 @@ async function cachedFetch(url, ctx, ttlSeconds) {
   });
 
   const cached = new Response(response.body, response);
-  cached.headers.set('Cache-Control', `public, max-age=${ttlSeconds}`);
-  ctx.waitUntil(cache.put(cacheKey, cached.clone()));
+  if (response.ok) {
+    cached.headers.set('Cache-Control', `public, max-age=${ttlSeconds}`);
+    ctx.waitUntil(cache.put(cacheKey, cached.clone()));
+  } else {
+    cached.headers.set('Cache-Control', 'no-store');
+  }
   return cached;
 }
 
