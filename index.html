@@ -5,10 +5,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
-<meta name="googlebot" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
-<meta name="referrer" content="same-origin">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://static.wixstatic.com https://unpkg.com https://*.basemaps.cartocdn.com https://cool-dew-3b6d.songmatin-2e5.workers.dev https://kardo-api-proxy.songmatin-2e5.workers.dev; connect-src 'self' https://raw.githubusercontent.com https://api.open-meteo.com https://opendata.cwa.gov.tw https://airlabs.co https://maps.googleapis.com https://cool-dew-3b6d.songmatin-2e5.workers.dev https://kardo-api-proxy.songmatin-2e5.workers.dev; worker-src 'self' blob: https://cdnjs.cloudflare.com; upgrade-insecure-requests">
 <title>飛行儀表板 — Kardo Aerial</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -16,7 +12,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="config/public-config.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -676,8 +671,6 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 
 <script>
 // ── CONSTANTS ──
-const CONFIG = window.KARDO_CONFIG || {};
-const API_PROXY_BASE = (CONFIG.apiProxyBase || '').replace(/\/$/,'');
 const BASE = 'https://raw.githubusercontent.com/songmatin/kardo-tools/main/';
 const WD = ['日','一','二','三','四','五','六'];
 const BEAUFORT = [
@@ -709,15 +702,6 @@ const AP_COORDS = {
 };
 const KML_COLORS = ['#7dd3fc','#38bdf8','#0ea5e9','#bae6fd','#93c5fd','#60a5fa'];
 const CAA_COLORS = ['#50a0ff','#32d264','#c084fc','#fb923c','#f472b6','#fbbf24'];
-
-function proxyUrl(path,params={}){
-  if(!API_PROXY_BASE) return '';
-  const url=new URL(path,API_PROXY_BASE || location.origin);
-  Object.entries(params).forEach(([k,v])=>{
-    if(v!==undefined&&v!==null&&v!=='') url.searchParams.set(k,v);
-  });
-  return url.toString();
-}
 
 // ── STATE ──
 let lat=null, lng=null, map, userMk, radiusCir;
@@ -1281,13 +1265,12 @@ function renderWindAlt(ws){
   document.getElementById('drone-table').innerHTML=dt;
 }
 
-const CWA_KEY='';
+const CWA_KEY='CWA-88714A94-2A9A-4B48-B5E4-E7595BDF48D9';
 async function fetchTides(){
   if(!lat||!lng) return;
   const tideDisc=document.getElementById('tide-disc');
   try{
-    const url=proxyUrl('/api/tides') || (CWA_KEY ? `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&format=JSON` : '');
-    if(!url) throw new Error('missing proxy');
+    const url=`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${CWA_KEY}&format=JSON`;
     const res=await fetch(url);
     const json=await res.json();
     const forecasts=json?.records?.TideForecasts;
@@ -1332,7 +1315,7 @@ async function fetchTides(){
   }
 }
 
-const AIR='';
+const AIR='3c10eb91-993a-4100-a3b3-e0cd809b2df6';
 const AP_IATA={RCSS:'TSA',RCTP:'TPE',RCGM:'HSZ',RCMQ:'RMQ',RCNN:'TNN',RCKH:'KHH'};
 let activeApIdx=0,flightTimer=null;
 
@@ -1365,8 +1348,8 @@ async function fetchFlights(){
   if(btn) btn.disabled=true;
   try{
     const[arr,dep]=await Promise.all([
-      fetch(proxyUrl('/api/flights',{iata,kind:'arr'}) || (AIR ? `https://airlabs.co/api/v9/schedules?arr_iata=${iata}&api_key=${AIR}` : '')).then(r=>r.json()),
-      fetch(proxyUrl('/api/flights',{iata,kind:'dep'}) || (AIR ? `https://airlabs.co/api/v9/schedules?dep_iata=${iata}&api_key=${AIR}` : '')).then(r=>r.json()),
+      fetch(`https://airlabs.co/api/v9/schedules?arr_iata=${iata}&api_key=${AIR}`).then(r=>r.json()),
+      fetch(`https://airlabs.co/api/v9/schedules?dep_iata=${iata}&api_key=${AIR}`).then(r=>r.json()),
     ]);
     const all=[...(arr.response||[]).map(f=>({...f,dir:'arr'})),...(dep.response||[]).map(f=>({...f,dir:'dep'}))];
     const now=new Date();
@@ -1433,7 +1416,7 @@ const AQI_COLORS={'良好':{bg:'#32d264',text:'#000'},'普通':{bg:'#ffd60a',tex
 async function fetchAQI(){
   if(!lat||!lng) return;
   try{
-    const url=proxyUrl('/api/aqi') || 'https://cool-dew-3b6d.songmatin-2e5.workers.dev';
+    const url='https://cool-dew-3b6d.songmatin-2e5.workers.dev';
     const res=await fetch(url);
     const json=await res.json();
     const records=Array.isArray(json)?json:json?.records;
@@ -1511,7 +1494,7 @@ function renderNotams(){
     </div>`).join('');
 }
 
-const GMAP_KEY='';
+const GMAP_KEY='AIzaSyC6FIbAT7mT9sUY3W8H4VwMtQfGXURzu00';
 let searchTimer=null,searchMarker=null;
 
 function onSearchInput(val){
@@ -1527,8 +1510,7 @@ function onSearchKey(e){
 }
 async function geocodeSearch(query){
   try{
-    const url=proxyUrl('/api/geocode',{address:query}) || (GMAP_KEY ? `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&region=tw&language=zh-TW&key=${GMAP_KEY}` : '');
-    if(!url) throw new Error('missing proxy');
+    const url=`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&region=tw&language=zh-TW&key=${GMAP_KEY}`;
     const d=await(await fetch(url)).json();
     if(d.status!=='OK'||!d.results.length){hideResults();return;}
     showResults(d.results.slice(0,5));
