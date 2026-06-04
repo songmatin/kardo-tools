@@ -63,8 +63,10 @@ https://kardo-api-proxy.songmatin-2e5.workers.dev
 終端機測試需使用 `curl`，不可直接輸入網址：
 
 ```bash
-curl -i -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/tides"
+curl -s -o /tmp/kardo-tides.json -w "tides %{http_code}\n" -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/tides"
 ```
+
+使用 `-o /tmp/...` 可以避免大型 JSON 直接灌滿終端機畫面。
 
 若 `songmatin.com` 由 Cloudflare DNS 管理，測試通過後可在 `wrangler.toml` 啟用：
 

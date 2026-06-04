@@ -97,14 +97,20 @@ apiProxyBase: 'https://tools.songmatin.com'
 workers.dev 測試時，請帶上允許的 `Origin` header。範例：
 
 ```bash
-curl -i -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/tides"
-curl -i -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/flights?iata=TSA&kind=arr"
-curl -i -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/geocode?address=%E5%8F%B0%E5%8C%97101"
-curl -i -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/aqi"
+curl -s -o /tmp/kardo-tides.json -w "tides %{http_code}\n" -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/tides"
+curl -s -o /tmp/kardo-flights-arr.json -w "flights-arr %{http_code}\n" -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/flights?iata=TSA&kind=arr"
+curl -s -o /tmp/kardo-geocode.json -w "geocode %{http_code}\n" -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/geocode?address=%E5%8F%B0%E5%8C%97101"
+curl -s -o /tmp/kardo-aqi.json -w "aqi %{http_code}\n" -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/aqi"
 curl -I -H "Origin: https://tools.songmatin.com" "https://kardo-api-proxy.songmatin-2e5.workers.dev/api/radar"
 ```
 
 直接在終端機輸入網址會被 shell 當成指令，應使用 `curl` 或貼到瀏覽器網址列。
+
+若需要查看回應摘要，可以用：
+
+```bash
+node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync('/tmp/kardo-tides.json','utf8')); console.log(Object.keys(j));"
+```
 
 ## 切換原則
 
