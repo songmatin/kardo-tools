@@ -849,11 +849,12 @@ function loadNFZ(){
   }).catch(()=>{});
 }
 
-let radarTimer=null;
+let radarTimer=null,radarObjectUrl=null;
 function initRadar(){ loadRadar(); radarTimer=setInterval(loadRadar,10*60*1000); }
-function loadRadar(){
+async function loadRadar(){
   const WORKER='https://cool-dew-3b6d.songmatin-2e5.workers.dev';
-  const url=proxyUrl('/api/radar',{_t:Date.now()}) || `${WORKER}?type=radar&_t=${Date.now()}`;
+  const proxied=proxyUrl('/api/radar',{_t:Date.now()});
+  const url=proxied || `${WORKER}?type=radar&_t=${Date.now()}`;
   const img=document.getElementById('radar-img');
   const loading=document.getElementById('radar-loading');
   const ts=document.getElementById('radar-ts');
@@ -866,7 +867,21 @@ function loadRadar(){
     if(ts) ts.textContent=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 更新`;
   };
   tmp.onerror=()=>{ if(loading){loading.style.display='flex';loading.textContent='載入失敗';} };
-  tmp.src=url;
+  try{
+    if(proxied){
+      const res=await fetch(url,{cache:'no-store'});
+      if(!res.ok) throw new Error(`radar ${res.status}`);
+      const blob=await res.blob();
+      if(radarObjectUrl) URL.revokeObjectURL(radarObjectUrl);
+      radarObjectUrl=URL.createObjectURL(blob);
+      tmp.src=radarObjectUrl;
+    }else{
+      tmp.src=url;
+    }
+  }catch(e){
+    console.warn('Radar error:',e.message);
+    if(loading){loading.style.display='flex';loading.textContent='載入失敗';}
+  }
 }
 function refreshRadarPanel(){
   const img=document.getElementById('radar-img');
