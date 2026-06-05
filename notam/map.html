@@ -10,7 +10,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#151413;--panel:rgba(24,23,22,.94);--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.12);--text:rgba(255,255,255,.88);--muted:rgba(255,255,255,.55);--accent:#b8965a;--blue:#50a0ff;--red:#ff4f41;--green:#32d264;--orange:#ff9f0a;--mono:'Courier New',monospace;--sans:'DM Sans',sans-serif;--serif:'Noto Serif TC',serif}
+:root{--bg:#151413;--panel:rgba(24,23,22,.94);--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.12);--text:rgba(255,255,255,.88);--muted:rgba(255,255,255,.55);--accent:#b8965a;--blue:#50a0ff;--red:#ff4f41;--green:#32d264;--orange:#ff9f0a;--unknown:#d8d0bf;--mono:'Courier New',monospace;--sans:'DM Sans',sans-serif;--serif:'Noto Serif TC',serif}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
 #map{position:fixed;inset:0;z-index:0}.leaflet-tile{filter:brightness(.62) saturate(.7)}
 .top{position:fixed;top:14px;left:14px;right:14px;z-index:20;display:flex;align-items:center;gap:10px;pointer-events:none}
@@ -19,6 +19,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
 .title{padding:10px 14px;min-width:0}.title h1{font-family:var(--serif);font-size:20px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.title div{font-size:11px;color:var(--muted);margin-top:2px}
 .panel{position:fixed;right:14px;top:86px;bottom:14px;width:min(390px,calc(100vw - 28px));z-index:18;background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(20px);display:flex;flex-direction:column;overflow:hidden}
 .panel-head{padding:15px 16px;border-bottom:1px solid var(--line)}.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}.panel-title{font-size:16px;font-weight:600}.panel-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6}
+.legend{position:fixed;left:14px;bottom:14px;z-index:18;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px;backdrop-filter:blur(18px);display:grid;gap:7px;font-size:11px;color:var(--muted)}
+.legend-row{display:flex;align-items:center;gap:8px}.legend-swatch{width:28px;height:0;border-top:3px solid var(--green)}.legend-swatch.planned{border-color:var(--orange)}.legend-swatch.unknown{border-color:var(--unknown);border-top-style:dashed}
 .tools{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
 input{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px 11px;outline:none}
 button{border:none;border-radius:8px;background:var(--accent);color:#111;font-weight:700;padding:0 12px;cursor:pointer}
@@ -28,11 +30,16 @@ button{border:none;border-radius:8px;background:var(--accent);color:#111;font-we
 .notice h3{font-size:14px;margin:8px 0 6px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px;color:var(--muted);line-height:1.5}.summary{font-size:12px;color:rgba(255,255,255,.72);line-height:1.7;margin-top:8px}
 .empty{padding:20px;color:var(--muted);font-size:13px;line-height:1.8;text-align:center}
 .coord-hit{color:var(--green);font-size:12px;margin-top:8px}.coord-miss{color:var(--orange);font-size:12px;margin-top:8px}
-@media(max-width:760px){.top{left:10px;right:10px;top:10px}.title h1{font-size:17px}.panel{left:10px;right:10px;top:auto;bottom:10px;width:auto;max-height:46vh}.tools{grid-template-columns:1fr}.tools button{padding:10px 12px}}
+@media(max-width:760px){.top{left:10px;right:10px;top:10px}.title h1{font-size:17px}.panel{left:10px;right:10px;top:auto;bottom:10px;width:auto;max-height:46vh}.tools{grid-template-columns:1fr}.tools button{padding:10px 12px}.legend{left:10px;bottom:calc(46vh + 20px)}}
 </style>
 </head>
 <body>
 <div id="map"></div>
+<div class="legend">
+  <div class="legend-row"><span class="legend-swatch"></span><span>生效中，且有高度資料</span></div>
+  <div class="legend-row"><span class="legend-swatch planned"></span><span>預告，且有高度資料</span></div>
+  <div class="legend-row"><span class="legend-swatch unknown"></span><span>高度未標示</span></div>
+</div>
 <div class="top">
   <a class="btn" href="./">返回</a>
   <div class="title"><h1 id="page-title">載入中...</h1><div id="page-sub">讀取 NOTAM 資料</div></div>
@@ -49,7 +56,7 @@ button{border:none;border-radius:8px;background:var(--accent);color:#111;font-we
   </div>
   <div class="list" id="notice-list"></div>
 </aside>
-<script src="notam-data.js"></script>
+<script src="notam-data.js?v=20260605-altitude-visibility"></script>
 <script>
 const params=new URLSearchParams(location.search);
 const data=window.KARDO_NOTAM_DATA;
@@ -86,18 +93,29 @@ if(hasCoord) runCoordQuery(latParam,lngParam);
 else renderList(notices);
 
 function drawNotice(n){
-  const color=n.status==='active'?'#32d264':'#ff9f0a';
+  const style=noticeStyle(n);
   let layer;
   if(n.type==='circle'){
-    layer=L.circle(n.center,{radius:n.radius,color,weight:2,fillColor:color,fillOpacity:.14});
+    layer=L.circle(n.center,{radius:n.radius,...style});
   }else{
-    layer=L.polygon(n.points,{color,weight:2,fillColor:color,fillOpacity:.14});
+    layer=L.polygon(n.points,style);
   }
   layer.addTo(map).bindPopup(`<b>${n.id}</b><br>${n.title}<br>${formatAltitude(n)}`);
-  layer.__noticeColor=color;
+  layer.__noticeStyle=style;
   layer.on('click',()=>selectNotice(n.id,{pan:false}));
   layerById.set(n.id,layer);
   layers.push(layer);
+}
+function noticeStyle(n){
+  const known=hasAltitude(n);
+  const color=known?(n.status==='active'?'#32d264':'#ff9f0a'):'#d8d0bf';
+  return {
+    color,
+    weight:known?2:3,
+    fillColor:color,
+    fillOpacity:known ? .14 : .08,
+    dashArray:known?null:'8 8',
+  };
 }
 function renderList(items,hitIds=[]){
   const el=document.getElementById('notice-list');
@@ -155,12 +173,13 @@ function markSelectedCard(id,{scroll=true}={}){
 function highlightLayer(id){
   layerById.forEach((layer,layerId)=>{
     const selected=layerId===id;
-    const color=layer.__noticeColor || '#ff9f0a';
+    const base=layer.__noticeStyle || { color:'#ff9f0a', weight:2, fillOpacity:.14, dashArray:null };
     if(typeof layer.setStyle==='function'){
       layer.setStyle({
-        color:selected?'#ffd36a':color,
-        weight:selected?4:2,
-        fillOpacity:selected ? .24 : .14,
+        color:selected?'#ffd36a':base.color,
+        weight:selected?4:base.weight,
+        fillOpacity:selected ? .24 : base.fillOpacity,
+        dashArray:selected?null:base.dashArray,
       });
       if(selected&&typeof layer.bringToFront==='function') layer.bringToFront();
     }
@@ -178,6 +197,9 @@ function formatAltitude(notice){
   if(!lower&&!upper) return '未標示';
   if(lower&&upper) return `${lower}-${upper}`;
   return lower || upper;
+}
+function hasAltitude(notice){
+  return Boolean(cleanAltitude(notice.lower) || cleanAltitude(notice.upper));
 }
 function cleanAltitude(value){
   const text=String(value || '').trim();
