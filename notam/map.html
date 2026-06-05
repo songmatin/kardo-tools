@@ -75,10 +75,11 @@ document.getElementById('panel-title').textContent=hasCoord?'座標命中結果'
 
 const map=L.map('map',{center,zoom:hasCoord?13:showAll||airport?.icao==='RCAA'?7:12,zoomControl:true,attributionControl:false});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-const notices=hasCoord||showAll?data.notices:data.notices.filter(n=>noticeBelongsTo(n,icao));
+const currentNotices=data.notices.filter(isCurrentNotice);
+const notices=hasCoord||showAll?currentNotices:currentNotices.filter(n=>noticeBelongsTo(n,icao));
 const layers=[];
 const layerById=new Map();
-const noticeById=new Map(data.notices.map(n=>[n.id,n]));
+const noticeById=new Map(currentNotices.map(n=>[n.id,n]));
 let selectedNoticeId=null;
 notices.forEach(n=>drawNotice(n));
 if(layers.length&&!hasCoord){
@@ -144,10 +145,10 @@ function runCoordQuery(lat,lng){
   if(coordMarker) map.removeLayer(coordMarker);
   coordMarker=L.circleMarker([lat,lng],{radius:8,color:'#fff',weight:2,fillColor:'#50a0ff',fillOpacity:1}).addTo(map).bindPopup('查詢座標').openPopup();
   map.setView([lat,lng],13);
-  const hits=data.notices.filter(n=>contains(n,lat,lng));
+  const hits=currentNotices.filter(n=>contains(n,lat,lng));
   document.getElementById('panel-title').textContent='座標命中結果';
   document.getElementById('panel-sub').innerHTML=hits.length?`查詢座標 ${lat.toFixed(5)}, ${lng.toFixed(5)} 命中 ${hits.length} 筆公告。`:`查詢座標 ${lat.toFixed(5)}, ${lng.toFixed(5)} 未命中本地公告範圍。`;
-  renderList(hits.length?hits:data.notices.slice(0,4),hits.map(h=>h.id));
+  renderList(hits.length?hits:currentNotices.slice(0,4),hits.map(h=>h.id));
 }
 function selectNotice(id,options={}){
   selectedNoticeId=id;
@@ -200,6 +201,9 @@ function formatAltitude(notice){
 }
 function hasAltitude(notice){
   return Boolean(cleanAltitude(notice.lower) || cleanAltitude(notice.upper));
+}
+function isCurrentNotice(notice){
+  return notice.status!=='expired';
 }
 function cleanAltitude(value){
   const text=String(value || '').trim();

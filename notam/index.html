@@ -70,8 +70,9 @@ button{border:none;border-radius:8px;background:var(--accent);color:#111;padding
 <script src="notam-data.js?v=20260605-altitude-visibility"></script>
 <script>
 const data=window.KARDO_NOTAM_DATA;
+const currentNotices=data.notices.filter(isCurrentNotice);
 const counts=data.airports.reduce((acc,ap)=>{
-  acc[ap.icao]=data.notices.filter(n=>noticeBelongsTo(n,ap.icao)).length;
+  acc[ap.icao]=currentNotices.filter(n=>noticeBelongsTo(n,ap.icao)).length;
   return acc;
 },{});
 const sourceLabel=data.source?.mode==='official-text-import'?'官方原文匯入':data.source?.mode==='public-aggregator'?'公開 NOTAM 聚合':'本地資料模型';
@@ -82,10 +83,13 @@ document.getElementById('airport-grid').innerHTML=data.airports.map(ap=>`
     <div class="name">${ap.name.replace(ap.icao+' ','')}</div>
     <div class="city">${ap.city} · ${counts[ap.icao] || 0} 筆</div>
   </a>`).join('');
-document.getElementById('notice-list').innerHTML=data.notices.slice(0,4).map(n=>`
+document.getElementById('notice-list').innerHTML=currentNotices.slice(0,4).map(n=>`
   <a class="mini" href="map.html?icao=${encodeURIComponent(n.icao)}&name=${encodeURIComponent(n.icao)}">
     <span>${n.id}</span><span>${n.title}</span>
   </a>`).join('');
+function isCurrentNotice(notice){
+  return notice.status!=='expired';
+}
 function noticeBelongsTo(notice,icao){
   if(icao==='ALL') return true;
   if(icao==='RCAA') return notice.fir==='RCAA' || /Q\)\s*RCAA\//.test(notice.raw || '');
