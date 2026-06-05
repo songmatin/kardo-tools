@@ -23,7 +23,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
 input{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px 11px;outline:none}
 button{border:none;border-radius:8px;background:var(--accent);color:#111;font-weight:700;padding:0 12px;cursor:pointer}
 .list{overflow:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
-.notice{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px}.notice.active{border-color:rgba(50,210,100,.35)}.notice.planned{border-color:rgba(255,159,10,.38)}
+.notice{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}.notice:hover{background:rgba(255,255,255,.085)}.notice.active{border-color:rgba(50,210,100,.35)}.notice.planned{border-color:rgba(255,159,10,.38)}.notice.selected{background:rgba(184,150,90,.14);border-color:rgba(184,150,90,.72);transform:translateY(-1px)}
 .notice-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.id{font-family:var(--mono);color:var(--blue);font-weight:700}.tag{font-size:10px;border-radius:999px;padding:3px 7px;background:rgba(255,255,255,.08);color:var(--muted)}
 .notice h3{font-size:14px;margin:8px 0 6px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px;color:var(--muted);line-height:1.5}.summary{font-size:12px;color:rgba(255,255,255,.72);line-height:1.7;margin-top:8px}
 .empty{padding:20px;color:var(--muted);font-size:13px;line-height:1.8;text-align:center}
@@ -69,6 +69,9 @@ const map=L.map('map',{center,zoom:hasCoord?13:airport?.icao==='RCAA'?7:12,zoomC
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
 const notices=hasCoord?data.notices:data.notices.filter(n=>!icao||n.icao===icao);
 const layers=[];
+const layerById=new Map();
+const noticeById=new Map(data.notices.map(n=>[n.id,n]));
+let selectedNoticeId=null;
 notices.forEach(n=>drawNotice(n));
 if(layers.length&&!hasCoord){
   const group=L.featureGroup(layers);
@@ -90,19 +93,23 @@ function drawNotice(n){
     layer=L.polygon(n.points,{color,weight:2,fillColor:color,fillOpacity:.14});
   }
   layer.addTo(map).bindPopup(`<b>${n.id}</b><br>${n.title}<br>${n.lower}-${n.upper}`);
+  layer.__noticeColor=color;
+  layer.on('click',()=>selectNotice(n.id,{pan:false}));
+  layerById.set(n.id,layer);
   layers.push(layer);
 }
 function renderList(items,hitIds=[]){
   const el=document.getElementById('notice-list');
   if(!items.length){el.innerHTML='<div class="empty">目前沒有可顯示的本地 NOTAM 資料。</div>';return;}
   el.innerHTML=items.map(n=>`
-    <article class="notice ${n.status}">
+    <article class="notice ${n.status}" data-notam-id="${escapeAttr(n.id)}" onclick="selectNotice('${escapeJs(n.id)}')">
       <div class="notice-top"><div class="id">${n.id}</div><div class="tag">${n.status==='active'?'生效中':'預告'}</div></div>
       <h3>${n.title}</h3>
       <div class="meta"><div>時間：${n.start}</div><div>至：${n.end}</div><div>高度：${n.lower}-${n.upper}</div><div>範圍：${n.type==='circle'?Math.round(n.radius)+'m':'多邊形'}</div></div>
       <div class="summary">${n.summary}</div>
       ${hitIds.includes(n.id)?'<div class="coord-hit">座標落在此公告範圍內</div>':''}
     </article>`).join('');
+  if(selectedNoticeId) markSelectedCard(selectedNoticeId,{scroll:false});
 }
 function parseCoord(input){
   const raw=input.trim();
@@ -122,6 +129,53 @@ function runCoordQuery(lat,lng){
   document.getElementById('panel-title').textContent='座標命中結果';
   document.getElementById('panel-sub').innerHTML=hits.length?`查詢座標 ${lat.toFixed(5)}, ${lng.toFixed(5)} 命中 ${hits.length} 筆公告。`:`查詢座標 ${lat.toFixed(5)}, ${lng.toFixed(5)} 未命中本地公告範圍。`;
   renderList(hits.length?hits:data.notices.slice(0,4),hits.map(h=>h.id));
+}
+function selectNotice(id,options={}){
+  selectedNoticeId=id;
+  updateSelectedPanel(id);
+  markSelectedCard(id,{scroll:options.scroll!==false});
+  highlightLayer(id);
+  const layer=layerById.get(id);
+  if(!layer) return;
+  if(options.pan!==false){
+    const bounds=typeof layer.getBounds==='function'?layer.getBounds():null;
+    if(bounds) map.fitBounds(bounds.pad(.3),{maxZoom:15});
+    else if(typeof layer.getLatLng==='function') map.setView(layer.getLatLng(),15);
+  }
+  layer.openPopup();
+}
+function markSelectedCard(id,{scroll=true}={}){
+  document.querySelectorAll('.notice.selected').forEach(item=>item.classList.remove('selected'));
+  const card=[...document.querySelectorAll('.notice')].find(item=>item.dataset.notamId===id);
+  if(!card) return;
+  card.classList.add('selected');
+  if(scroll) card.scrollIntoView({block:'center',behavior:'smooth'});
+}
+function highlightLayer(id){
+  layerById.forEach((layer,layerId)=>{
+    const selected=layerId===id;
+    const color=layer.__noticeColor || '#ff9f0a';
+    if(typeof layer.setStyle==='function'){
+      layer.setStyle({
+        color:selected?'#ffd36a':color,
+        weight:selected?4:2,
+        fillOpacity:selected ? .24 : .14,
+      });
+      if(selected&&typeof layer.bringToFront==='function') layer.bringToFront();
+    }
+  });
+}
+function updateSelectedPanel(id){
+  const notice=noticeById.get(id);
+  if(!notice) return;
+  document.getElementById('panel-title').textContent=`${notice.id} 詳細資料`;
+  document.getElementById('panel-sub').innerHTML=`${notice.icao} · ${notice.start || '時間未標示'} 至 ${notice.end || '時間未標示'}<br>${notice.lower || 'GND'}-${notice.upper || '高度未標示'} · ${notice.type==='circle'?Math.round(notice.radius || 0)+'m':'多邊形'}`;
+}
+function escapeAttr(value){
+  return String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escapeJs(value){
+  return String(value).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 function contains(n,lat,lng){
   if(n.type==='circle') return distanceMeters(lat,lng,n.center[0],n.center[1])<=n.radius;
