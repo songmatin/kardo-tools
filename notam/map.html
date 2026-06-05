@@ -93,7 +93,7 @@ function drawNotice(n){
   }else{
     layer=L.polygon(n.points,{color,weight:2,fillColor:color,fillOpacity:.14});
   }
-  layer.addTo(map).bindPopup(`<b>${n.id}</b><br>${n.title}<br>${n.lower}-${n.upper}`);
+  layer.addTo(map).bindPopup(`<b>${n.id}</b><br>${n.title}<br>${formatAltitude(n)}`);
   layer.__noticeColor=color;
   layer.on('click',()=>selectNotice(n.id,{pan:false}));
   layerById.set(n.id,layer);
@@ -106,7 +106,7 @@ function renderList(items,hitIds=[]){
     <article class="notice ${n.status}" data-notam-id="${escapeAttr(n.id)}" onclick="selectNotice('${escapeJs(n.id)}')">
       <div class="notice-top"><div class="id">${n.id}</div><div class="tag">${n.status==='active'?'生效中':'預告'}</div></div>
       <h3>${n.title}</h3>
-      <div class="meta"><div>時間：${n.start}</div><div>至：${n.end}</div><div>高度：${n.lower}-${n.upper}</div><div>範圍：${n.type==='circle'?Math.round(n.radius)+'m':'多邊形'}</div></div>
+      <div class="meta"><div>時間：${n.start}</div><div>至：${n.end}</div><div>高度：${formatAltitude(n)}</div><div>範圍：${n.type==='circle'?Math.round(n.radius)+'m':'多邊形'}</div></div>
       <div class="summary">${n.summary}</div>
       ${hitIds.includes(n.id)?'<div class="coord-hit">座標落在此公告範圍內</div>':''}
     </article>`).join('');
@@ -170,7 +170,18 @@ function updateSelectedPanel(id){
   const notice=noticeById.get(id);
   if(!notice) return;
   document.getElementById('panel-title').textContent=`${notice.id} 詳細資料`;
-  document.getElementById('panel-sub').innerHTML=`${notice.icao} · ${notice.start || '時間未標示'} 至 ${notice.end || '時間未標示'}<br>${notice.lower || 'GND'}-${notice.upper || '高度未標示'} · ${notice.type==='circle'?Math.round(notice.radius || 0)+'m':'多邊形'}`;
+  document.getElementById('panel-sub').innerHTML=`${notice.icao} · ${notice.start || '時間未標示'} 至 ${notice.end || '時間未標示'}<br>${formatAltitude(notice)} · ${notice.type==='circle'?Math.round(notice.radius || 0)+'m':'多邊形'}`;
+}
+function formatAltitude(notice){
+  const lower=cleanAltitude(notice.lower);
+  const upper=cleanAltitude(notice.upper);
+  if(!lower&&!upper) return '未標示';
+  if(lower&&upper) return `${lower}-${upper}`;
+  return lower || upper;
+}
+function cleanAltitude(value){
+  const text=String(value || '').trim();
+  return !text || /^UNSPECIFIED$/i.test(text) ? '' : text;
 }
 function noticeBelongsTo(notice,targetIcao){
   if(!targetIcao||targetIcao==='ALL') return true;

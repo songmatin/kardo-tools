@@ -82,8 +82,8 @@ function parseBlock(block) {
   const icao = readField(compact, 'A') || 'RCAA';
   const start = parseNotamTime(readField(compact, 'B'));
   const end = parseNotamTime(readField(compact, 'C'));
-  const lower = readField(compact, 'F') || 'GND';
-  const upper = stripClosing(readField(compact, 'G') || '');
+  const lower = normalizeVerticalLimit(readField(compact, 'F'));
+  const upper = normalizeVerticalLimit(stripClosing(readField(compact, 'G') || ''));
   const eText = readField(compact, 'E') || compact;
   const qText = readField(compact, 'Q') || '';
   const fir = qText.match(/^([A-Z]{4})\//)?.[1] || 'RCAA';
@@ -124,11 +124,21 @@ function parseBlock(block) {
 function readField(text, field) {
   const next = field === 'Q' ? 'A' : String.fromCharCode(field.charCodeAt(0) + 1);
   const pattern = new RegExp(`${field}\\)\\s*([\\s\\S]*?)(?=\\s${next}\\)|\\s[A-G]\\)|$)`);
+  if (field === 'F') {
+    const matches = [...text.matchAll(new RegExp(`${field}\\)\\s*([\\s\\S]*?)(?=\\s${next}\\)|\\s[A-G]\\)|$)`, 'g'))];
+    return matches.at(-1)?.[1]?.trim() || '';
+  }
   return text.match(pattern)?.[1]?.trim() || '';
 }
 
 function stripClosing(value) {
   return value.replace(/\)+$/g, '').trim();
+}
+
+function normalizeVerticalLimit(value) {
+  const cleaned = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!cleaned || /^UNSPECIFIED$/i.test(cleaned)) return '';
+  return cleaned;
 }
 
 function parseQCoordinate(qText) {

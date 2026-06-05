@@ -100,11 +100,47 @@ function toNotamBlock(notice) {
   const end = toNotamTimestamp(notice.end);
   const qLine = makeQLine(notice);
   const description = cleanDescription(notice.description);
+  const vertical = extractVerticalLimits(description);
   return `(${notice.id} NOTAMN
 Q) ${qLine}
 A) ${notice.icao} B) ${start} C) ${end}
 E) ${description}
-F) GND G) 400FT AMSL)`;
+F) ${vertical.lower} G) ${vertical.upper})`;
+}
+
+function extractVerticalLimits(description) {
+  const text = String(description || '').replace(/\s+/g, ' ').trim();
+  const fields = text.match(/\bF\)\s*([^)]*?)(?:\s+\bG\)\s*([^)]*?))?(?=\s+[A-Z]\)|$)/i);
+  if (fields) {
+    return {
+      lower: normalizeVerticalLimit(fields[1]) || 'UNSPECIFIED',
+      upper: normalizeVerticalLimit(fields[2]) || 'UNSPECIFIED',
+    };
+  }
+
+  const upTo = text.match(/\b(?:UP TO|ABV|ABOVE|BELOW|BLW|MAX(?:IMUM)?(?: ALT)?|ALT(?:ITUDE)?(?: UP TO)?)\s*([0-9,]+)\s*(FT|M)\s*(AMSL|AGL)?/i);
+  if (upTo) {
+    return {
+      lower: 'UNSPECIFIED',
+      upper: normalizeVerticalLimit(`${upTo[1]}${upTo[2]} ${upTo[3] || ''}`),
+    };
+  }
+
+  return { lower: 'UNSPECIFIED', upper: 'UNSPECIFIED' };
+}
+
+function normalizeVerticalLimit(value) {
+  const cleaned = String(value || '')
+    .replace(/[.,;:]+$/g, '')
+    .replace(/\s+Q[A-Z]{4}.*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+  if (!cleaned) return '';
+  if (/^(GND|SFC|SURFACE)$/.test(cleaned)) return cleaned === 'SURFACE' ? 'SFC' : cleaned;
+  const amount = cleaned.match(/([0-9,]+)\s*(FT|M)\s*(AMSL|AGL)?/);
+  if (amount) return `${amount[1].replace(/,/g, '')}${amount[2]}${amount[3] ? ` ${amount[3]}` : ''}`;
+  return cleaned;
 }
 
 function cleanDescription(value) {
