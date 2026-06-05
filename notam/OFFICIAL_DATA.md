@@ -73,3 +73,31 @@ notam/notam-data.js
 4. 前端每次開啟讀取最新資料。
 
 在未取得授權前，不建議直接爬取登入後頁面或未公開 endpoint。
+
+## 公開聚合資料抓取方案
+
+若短期需要自動更新，可以先使用公開 NOTAM 聚合頁面作為輔助來源。已建立 MetarCentral 抓取器：
+
+```bash
+node notam/fetch-metarcentral-notams.mjs RCSS RCTP RCAA
+```
+
+此腳本會：
+
+1. 讀取 `https://metarcentral.com/airport/{ICAO}/notam`。
+2. 篩選 `QWULW`、`UNMANNED ACFT`、`UAS` 或 `UA ACT`。
+3. 轉成 `notam/source/metarcentral-notams.txt`。
+4. 呼叫 `notam/build-notam-data.mjs` 產生 `notam/notam-data.js`。
+
+建議排程頻率：
+
+```text
+每 6 小時一次，或每日 2 至 4 次。
+```
+
+注意事項：
+
+- 這不是臺灣官方直連資料源，頁面格式可能變動。
+- 應保留來源標示與更新時間。
+- 若未來 MetarCentral 條款不允許自動抓取，應停止使用。
+- 正式飛行前仍應以官方 AIS / AES / 飛航公告查詢結果為準。
