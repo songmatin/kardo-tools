@@ -8,6 +8,8 @@ const sourcePath = process.argv[2]
 const outputPath = process.argv[3]
   ? path.resolve(process.argv[3])
   : path.join(root, 'notam-data.js');
+const sourceMode = process.env.KARDO_NOTAM_SOURCE_MODE || 'official-text-import';
+const sourceNote = process.env.KARDO_NOTAM_SOURCE_NOTE || 'Generated from official NOTAM text copied/exported from AIS/AES. Verify against the official system before flight.';
 
 const airports = [
   { icao: 'RCSS', name: 'RCSS 松山', city: '台北', lat: 25.0694, lng: 121.5521 },
@@ -30,10 +32,10 @@ const notices = parseNotams(raw);
 const payload = {
   updatedAt: formatLocalTime(new Date()),
   source: {
-    mode: 'official-text-import',
+    mode: sourceMode,
     input: path.relative(root, sourcePath),
     generatedAt: new Date().toISOString(),
-    note: 'Generated from official NOTAM text copied/exported from AIS/AES. Verify against the official system before flight.',
+    note: sourceNote,
   },
   airports,
   notices,

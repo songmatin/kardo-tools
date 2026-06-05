@@ -61,7 +61,7 @@ const hasCoord=Number.isFinite(latParam)&&Number.isFinite(lngParam);
 const center=hasCoord?[latParam,lngParam]:airport?[airport.lat,airport.lng]:[23.7,121.0];
 const title=params.get('name') || airport?.name || 'NOTAM 地圖';
 document.getElementById('page-title').textContent=title;
-const sourceLabel=data.source?.mode==='official-text-import'?'官方原文匯入':'本地資料模型';
+const sourceLabel=data.source?.mode==='official-text-import'?'官方原文匯入':data.source?.mode==='public-aggregator'?'公開 NOTAM 聚合':'本地資料模型';
 document.getElementById('page-sub').textContent=`最後更新：${data.updatedAt} · ${sourceLabel}`;
 document.getElementById('panel-title').textContent=hasCoord?'座標命中結果':`${title} 公告`;
 

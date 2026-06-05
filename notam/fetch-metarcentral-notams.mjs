@@ -39,7 +39,14 @@ execFileSync(process.execPath, [
   path.join(root, 'build-notam-data.mjs'),
   sourcePath,
   outputPath,
-], { stdio: 'inherit' });
+], {
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    KARDO_NOTAM_SOURCE_MODE: 'public-aggregator',
+    KARDO_NOTAM_SOURCE_NOTE: 'Generated from public MetarCentral NOTAM pages. Verify against official AIS/AES before flight.',
+  },
+});
 
 async function fetchAirportNotams(icao) {
   const url = `https://metarcentral.com/airport/${encodeURIComponent(icao)}/notam`;
