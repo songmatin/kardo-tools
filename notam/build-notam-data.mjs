@@ -86,6 +86,7 @@ function parseBlock(block) {
   const upper = stripClosing(readField(compact, 'G') || '');
   const eText = readField(compact, 'E') || compact;
   const qText = readField(compact, 'Q') || '';
+  const fir = qText.match(/^([A-Z]{4})\//)?.[1] || 'RCAA';
   const qShape = parseQCoordinate(qText);
   const points = extractCoordinates(eText);
   const radius = extractRadius(eText) || qShape?.radius || 1000;
@@ -104,6 +105,7 @@ function parseBlock(block) {
   return {
     id,
     icao,
+    fir,
     title: makeTitle(eText),
     status: statusFromTime(start, end),
     type,

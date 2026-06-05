@@ -70,18 +70,27 @@ button{border:none;border-radius:8px;background:var(--accent);color:#111;padding
 <script src="notam-data.js"></script>
 <script>
 const data=window.KARDO_NOTAM_DATA;
+const counts=data.airports.reduce((acc,ap)=>{
+  acc[ap.icao]=data.notices.filter(n=>noticeBelongsTo(n,ap.icao)).length;
+  return acc;
+},{});
 const sourceLabel=data.source?.mode==='official-text-import'?'官方原文匯入':data.source?.mode==='public-aggregator'?'公開 NOTAM 聚合':'本地資料模型';
 document.getElementById('updated').textContent=`最後更新：${data.updatedAt} · ${sourceLabel}`;
 document.getElementById('airport-grid').innerHTML=data.airports.map(ap=>`
   <a class="airport" href="map.html?${ap.icao==='ALL'?'all=1':`icao=${encodeURIComponent(ap.icao)}`}&name=${encodeURIComponent(ap.name)}">
     <div class="icao">${ap.icao}</div>
     <div class="name">${ap.name.replace(ap.icao+' ','')}</div>
-    <div class="city">${ap.city}</div>
+    <div class="city">${ap.city} · ${counts[ap.icao] || 0} 筆</div>
   </a>`).join('');
 document.getElementById('notice-list').innerHTML=data.notices.slice(0,4).map(n=>`
   <a class="mini" href="map.html?icao=${encodeURIComponent(n.icao)}&name=${encodeURIComponent(n.icao)}">
     <span>${n.id}</span><span>${n.title}</span>
   </a>`).join('');
+function noticeBelongsTo(notice,icao){
+  if(icao==='ALL') return true;
+  if(icao==='RCAA') return notice.fir==='RCAA' || /Q\)\s*RCAA\//.test(notice.raw || '');
+  return notice.icao===icao;
+}
 function parseCoord(input){
   const raw=input.trim();
   const dec=raw.match(/(-?\d+(?:\.\d+)?)\s*[,， ]\s*(-?\d+(?:\.\d+)?)/);

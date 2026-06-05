@@ -68,7 +68,7 @@ document.getElementById('panel-title').textContent=hasCoord?'座標命中結果'
 
 const map=L.map('map',{center,zoom:hasCoord?13:showAll||airport?.icao==='RCAA'?7:12,zoomControl:true,attributionControl:false});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-const notices=hasCoord||showAll?data.notices:data.notices.filter(n=>!icao||n.icao===icao);
+const notices=hasCoord||showAll?data.notices:data.notices.filter(n=>noticeBelongsTo(n,icao));
 const layers=[];
 const layerById=new Map();
 const noticeById=new Map(data.notices.map(n=>[n.id,n]));
@@ -171,6 +171,11 @@ function updateSelectedPanel(id){
   if(!notice) return;
   document.getElementById('panel-title').textContent=`${notice.id} 詳細資料`;
   document.getElementById('panel-sub').innerHTML=`${notice.icao} · ${notice.start || '時間未標示'} 至 ${notice.end || '時間未標示'}<br>${notice.lower || 'GND'}-${notice.upper || '高度未標示'} · ${notice.type==='circle'?Math.round(notice.radius || 0)+'m':'多邊形'}`;
+}
+function noticeBelongsTo(notice,targetIcao){
+  if(!targetIcao||targetIcao==='ALL') return true;
+  if(targetIcao==='RCAA') return notice.fir==='RCAA' || /Q\)\s*RCAA\//.test(notice.raw || '');
+  return notice.icao===targetIcao;
 }
 function escapeAttr(value){
   return String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
