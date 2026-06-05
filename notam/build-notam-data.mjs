@@ -12,6 +12,19 @@ const sourceMode = process.env.KARDO_NOTAM_SOURCE_MODE || 'official-text-import'
 const sourceNote = process.env.KARDO_NOTAM_SOURCE_NOTE || 'Generated from official NOTAM text copied/exported from AIS/AES. Verify against the official system before flight.';
 
 const airports = [
+  { icao: 'ALL', name: '全台灣 NOTAM', city: 'ALL', lat: 23.7, lng: 121.0 },
+  { icao: 'RCBS', name: 'RCBS 金門', city: '金門', lat: 24.4279, lng: 118.3592 },
+  { icao: 'RCCM', name: 'RCCM 七美', city: '澎湖', lat: 23.2131, lng: 119.4175 },
+  { icao: 'RCFG', name: 'RCFG 馬祖南竿', city: '連江', lat: 26.1598, lng: 119.9581 },
+  { icao: 'RCFN', name: 'RCFN 臺東豐年', city: '臺東', lat: 22.7549, lng: 121.1017 },
+  { icao: 'RCGI', name: 'RCGI 綠島', city: '臺東', lat: 22.6739, lng: 121.4665 },
+  { icao: 'RCKU', name: 'RCKU 嘉義', city: '嘉義', lat: 23.4618, lng: 120.3928 },
+  { icao: 'RCKW', name: 'RCKW 恆春', city: '屏東', lat: 22.0411, lng: 120.7302 },
+  { icao: 'RCLY', name: 'RCLY 蘭嶼', city: '臺東', lat: 22.0270, lng: 121.5350 },
+  { icao: 'RCMT', name: 'RCMT 馬祖北竿', city: '連江', lat: 26.2242, lng: 120.0025 },
+  { icao: 'RCPO', name: 'RCPO 新竹', city: '新竹', lat: 24.8180, lng: 120.9390 },
+  { icao: 'RCSP', name: 'RCSP 太平', city: '南沙', lat: 10.3766, lng: 114.3650 },
+  { icao: 'RCWA', name: 'RCWA 望安', city: '澎湖', lat: 23.3674, lng: 119.5028 },
   { icao: 'RCSS', name: 'RCSS 松山', city: '台北', lat: 25.0694, lng: 121.5521 },
   { icao: 'RCTP', name: 'RCTP 桃園', city: '桃園', lat: 25.0777, lng: 121.2327 },
   { icao: 'RCGM', name: 'RCGM 新竹', city: '新竹', lat: 24.8179, lng: 120.9382 },

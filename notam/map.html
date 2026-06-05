@@ -54,6 +54,7 @@ button{border:none;border-radius:8px;background:var(--accent);color:#111;font-we
 const params=new URLSearchParams(location.search);
 const data=window.KARDO_NOTAM_DATA;
 const icao=params.get('icao');
+const showAll=params.get('all')==='1'||icao==='ALL';
 const latParam=parseFloat(params.get('lat'));
 const lngParam=parseFloat(params.get('lng'));
 const airport=data.airports.find(a=>a.icao===icao);
@@ -65,9 +66,9 @@ const sourceLabel=data.source?.mode==='official-text-import'?'官方原文匯入
 document.getElementById('page-sub').textContent=`最後更新：${data.updatedAt} · ${sourceLabel}`;
 document.getElementById('panel-title').textContent=hasCoord?'座標命中結果':`${title} 公告`;
 
-const map=L.map('map',{center,zoom:hasCoord?13:airport?.icao==='RCAA'?7:12,zoomControl:true,attributionControl:false});
+const map=L.map('map',{center,zoom:hasCoord?13:showAll||airport?.icao==='RCAA'?7:12,zoomControl:true,attributionControl:false});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-const notices=hasCoord?data.notices:data.notices.filter(n=>!icao||n.icao===icao);
+const notices=hasCoord||showAll?data.notices:data.notices.filter(n=>!icao||n.icao===icao);
 const layers=[];
 const layerById=new Map();
 const noticeById=new Map(data.notices.map(n=>[n.id,n]));

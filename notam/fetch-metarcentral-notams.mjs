@@ -6,6 +6,18 @@ const root = path.dirname(new URL(import.meta.url).pathname);
 const sourcePath = path.join(root, 'source', 'metarcentral-notams.txt');
 const outputPath = path.join(root, 'notam-data.js');
 const icaos = (process.argv.slice(2).length ? process.argv.slice(2) : [
+  'RCBS',
+  'RCCM',
+  'RCFG',
+  'RCFN',
+  'RCGI',
+  'RCKU',
+  'RCKW',
+  'RCLY',
+  'RCMT',
+  'RCPO',
+  'RCSP',
+  'RCWA',
   'RCSS',
   'RCTP',
   'RCGM',
@@ -14,7 +26,7 @@ const icaos = (process.argv.slice(2).length ? process.argv.slice(2) : [
   'RCKH',
   'RCYU',
   'RCQC',
-]).map((item) => item.toUpperCase());
+]).map((item) => item.toUpperCase()).filter((item) => item !== 'ALL');
 
 const blocks = [];
 for (const icao of icaos) {
@@ -87,11 +99,23 @@ function toNotamBlock(notice) {
   const start = toNotamTimestamp(notice.start);
   const end = toNotamTimestamp(notice.end);
   const qLine = makeQLine(notice);
+  const description = cleanDescription(notice.description);
   return `(${notice.id} NOTAMN
 Q) ${qLine}
 A) ${notice.icao} B) ${start} C) ${end}
-E) ${notice.description}
+E) ${description}
 F) GND G) 400FT AMSL)`;
+}
+
+function cleanDescription(value) {
+  return String(value)
+    .replace(/\r/g, '')
+    .replace(/[^\S\n]+$/gm, '')
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line) => !/^[^\w\d]+$/.test(line.trim()))
+    .join('\n')
+    .trim();
 }
 
 function makeQLine(notice) {
