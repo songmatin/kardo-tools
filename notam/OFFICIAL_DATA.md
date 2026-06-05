@@ -79,7 +79,7 @@ notam/notam-data.js
 若短期需要自動更新，可以先使用公開 NOTAM 聚合頁面作為輔助來源。已建立 MetarCentral 抓取器：
 
 ```bash
-node notam/fetch-metarcentral-notams.mjs RCSS RCTP RCAA
+node notam/fetch-metarcentral-notams.mjs RCSS RCTP
 ```
 
 此腳本會：
@@ -98,6 +98,7 @@ node notam/fetch-metarcentral-notams.mjs RCSS RCTP RCAA
 注意事項：
 
 - 這不是臺灣官方直連資料源，頁面格式可能變動。
+- MetarCentral 以機場頁為主，`RCAA` 這類 FIR 代碼可能沒有頁面；抓取器會跳過 404 項目。
 - 應保留來源標示與更新時間。
 - 若未來 MetarCentral 條款不允許自動抓取，應停止使用。
 - 正式飛行前仍應以官方 AIS / AES / 飛航公告查詢結果為準。

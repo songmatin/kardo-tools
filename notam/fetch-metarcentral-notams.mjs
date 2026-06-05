@@ -14,15 +14,22 @@ const icaos = (process.argv.slice(2).length ? process.argv.slice(2) : [
   'RCKH',
   'RCYU',
   'RCQC',
-  'RCAA',
 ]).map((item) => item.toUpperCase());
 
 const blocks = [];
 for (const icao of icaos) {
-  const html = await fetchAirportNotams(icao);
-  const notices = parseMetarCentralHtml(html, icao);
-  blocks.push(...notices.map(toNotamBlock));
-  console.log(`${icao}: ${notices.length} unmanned aircraft NOTAM(s)`);
+  try {
+    const html = await fetchAirportNotams(icao);
+    const notices = parseMetarCentralHtml(html, icao);
+    blocks.push(...notices.map(toNotamBlock));
+    console.log(`${icao}: ${notices.length} unmanned aircraft NOTAM(s)`);
+  } catch (error) {
+    console.warn(`${icao}: skipped (${error.message})`);
+  }
+}
+
+if (!blocks.length) {
+  throw new Error('No unmanned aircraft NOTAMs fetched. Check source availability or ICAO list.');
 }
 
 fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
