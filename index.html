@@ -589,12 +589,12 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
       <div id="ap-detail"><div class="ap-name" id="ap-name">--</div><div class="ap-info-grid" id="ap-info-grid"></div></div>
       <div style="margin-top:8px;">
         <div style="font-size:8px;color:var(--w55);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;">
-          <span>接下來3小時航班</span>
+          <span>接下來10小時航班</span>
           <span id="flt-updated" style="color:var(--w30);font-size:8px;"></span>
         </div>
         <div id="flight-status-bar" style="display:none;"></div>
         <div id="flight-list"><div style="padding:12px;font-size:10px;color:var(--w30);text-align:center;">切換機場後自動載入</div></div>
-        <button class="flt-refresh-btn" id="flt-refresh-btn" onclick="fetchFlights()">↻ 重新查詢航班</button>
+        <button class="flt-refresh-btn" id="flt-refresh-btn" onclick="fetchFlights(true)">↻ 重新查詢航班</button>
       </div>
     </div>
 
@@ -1322,7 +1322,14 @@ async function fetchTides(){
   }
 }
 
-const AIR='3c10eb91-993a-4100-a3b3-e0cd809b2df6';
+const FLIGHT_API='https://kardo-flights.songmatin-2e5.workers.dev/';
+let _fltCache=null,_fltCacheTs=0;
+async function getFlightData(force){
+  if(!force && _fltCache && Date.now()-_fltCacheTs<90000) return _fltCache;
+  const r=await fetch(FLIGHT_API);
+  _fltCache=await r.json(); _fltCacheTs=Date.now();
+  return _fltCache;
+}
 const AP_IATA={RCSS:'TSA',RCTP:'TPE',RCGM:'HSZ',RCMQ:'RMQ',RCNN:'TNN',RCKH:'KHH'};
 let activeApIdx=0,flightTimer=null;
 
@@ -1345,75 +1352,75 @@ function selectAirport(i){
   document.getElementById('flight-list').innerHTML='<div style="padding:12px;font-size:10px;color:var(--w30);text-align:center;">載入中...</div>';
   if(flightTimer) clearInterval(flightTimer);
   fetchFlights();
-  flightTimer=setInterval(fetchFlights,20*60*1000);
+  flightTimer=setInterval(fetchFlights,60*1000);
 }
 
-async function fetchFlights(){
+async function fetchFlights(force){
   const btn=document.getElementById('flt-refresh-btn');
+  const sb=document.getElementById('flight-status-bar');
+  const fl=document.getElementById('flight-list');
   const iata=AP_IATA[AIRPORTS[activeApIdx].code];
-  if(!iata){document.getElementById('flight-list').innerHTML='<div style="padding:10px;font-size:10px;color:var(--w30);text-align:center;">此機場暫無資料</div>';return;}
   if(btn) btn.disabled=true;
   try{
-    const[arr,dep]=await Promise.all([
-      fetch(`https://airlabs.co/api/v9/schedules?arr_iata=${iata}&api_key=${AIR}`).then(r=>r.json()),
-      fetch(`https://airlabs.co/api/v9/schedules?dep_iata=${iata}&api_key=${AIR}`).then(r=>r.json()),
-    ]);
-    const all=[...(arr.response||[]).map(f=>({...f,dir:'arr'})),...(dep.response||[]).map(f=>({...f,dir:'dep'}))];
-    const now=new Date();
-    function parseT(f){
-      const s=f.dir==='arr'?(f.arr_estimated||f.arr_actual||f.arr_time):(f.dep_estimated||f.dep_actual||f.dep_time);
-      if(!s) return null;
-      const d=new Date((s.includes('T')?s:s.replace(' ','T'))+'+08:00');
-      return isNaN(d)?null:d;
+    const data=await getFlightData(force);
+    const apData=data.airports&&data.airports[iata];
+    if(!apData){ // 軍用場或未納入（如 HSZ 新竹）
+      sb.style.display='none';
+      fl.innerHTML='<div style="padding:12px;font-size:10px;color:var(--w30);text-align:center;">此機場無民航班表（軍用／未提供）</div>';
+      if(btn) btn.disabled=false; return;
     }
-    const parsed=all.filter(f=>f.status!=='landed'&&f.status!=='cancelled').map(f=>({...f,t:parseT(f)})).filter(f=>f.t).sort((a,b)=>a.t-b.t);
-    const deduped=[];let lastMin=null;
-    parsed.forEach(f=>{const m=Math.round(f.t/60000);if(m!==lastMin){deduped.push(f);lastMin=m;}});
-    const upcoming=deduped.filter(f=>f.t>now&&f.t<new Date(now.getTime()+3*3600000));
+    const now=Date.now();
+    const WINDOW=10*3600000;
+    const hasData=(apData.arrivals||[]).length+(apData.departures||[]).length>0;
+    const raw=[...(apData.arrivals||[]),...(apData.departures||[])]
+      .filter(f=>!/取消|CANCEL/i.test(f.rmk||''))
+      .filter(f=>typeof f.t==='number')
+      .sort((a,b)=>a.t-b.t);
+    const deduped=[];let lastKey=null;
+    raw.forEach(f=>{const k=Math.round(f.t/60000)+f.dir;if(k!==lastKey){deduped.push(f);lastKey=k;}});
+    const upcoming=deduped.filter(f=>f.t>now&&f.t<now+WINDOW);
     const next=upcoming[0]||null,prev=deduped.filter(f=>f.t<=now).slice(-1)[0]||null;
     const gapLeft=next?Math.round((next.t-now)/60000):null;
     const gapTotal=(prev&&next)?Math.round((next.t-prev.t)/60000):null;
     const safeColor=gapLeft===null?'var(--green)':gapLeft>=15?'var(--green)':gapLeft>=8?'var(--orange)':'var(--red)';
     const safeLabel=gapLeft===null?'✅ 無航班':gapLeft>=15?'✅ 充裕':gapLeft>=8?'⚠️ 留意':'🚫 緊張';
-    const sb=document.getElementById('flight-status-bar');
     sb.style.display='block';
     if(!next){
-      sb.innerHTML=`<div style="font-size:13px;font-weight:600;color:var(--green);">✅ 未來3小時無航班</div>`;
+      sb.innerHTML=`<div style="font-size:13px;font-weight:600;color:${hasData?'var(--green)':'var(--orange)'};">${hasData?'✅ 未來10小時無航班':'⏳ 班表更新中…'}</div>`;
     } else {
       const pct=gapTotal?Math.max(0,Math.min(100,Math.round(gapLeft/gapTotal*100))):100;
       sb.innerHTML=`
         <div class="flt-dir-label">${next.dir==='arr'?'↓ 下一班降落':'↑ 下一班起飛'}</div>
         <div class="flt-status-row">
           <div><div class="flt-countdown" style="color:${safeColor};">${gapLeft}<span class="flt-countdown-unit">分鐘後</span></div></div>
-          <div class="flt-next-info"><div class="flt-next-time" style="color:${safeColor};">${fmt(next.t)}</div><div class="flt-next-no">${next.flight_iata||next.flight_icao||'—'}</div></div>
+          <div class="flt-next-info"><div class="flt-next-time" style="color:${safeColor};">${fmt(new Date(next.t))}</div><div class="flt-next-no">${next.no||'—'}</div></div>
         </div>
         ${gapTotal?`<div class="flt-gap-track"><div class="flt-gap-fill" style="width:${pct}%;background:${safeColor};"></div></div>
-        <div class="flt-gap-info"><span>${prev?fmt(prev.t):'—'}</span><span class="flt-safe-badge" style="color:${safeColor};">${safeLabel}</span><span>${fmt(next.t)}</span></div>`:''}`;
+        <div class="flt-gap-info"><span>${prev?fmt(new Date(prev.t)):'—'}</span><span class="flt-safe-badge" style="color:${safeColor};">${safeLabel}</span><span>${fmt(new Date(next.t))}</span></div>`:''}`;
     }
-    const fl=document.getElementById('flight-list');
     if(!upcoming.length){
-      fl.innerHTML='<div style="padding:12px;font-size:10px;color:var(--w55);text-align:center;">無航班資料</div>';
+      fl.innerHTML=`<div style="padding:12px;font-size:10px;color:var(--w55);text-align:center;">${hasData?'未來10小時無航班':'班表更新中，請稍候'}</div>`;
     } else {
-      fl.innerHTML=upcoming.slice(0,18).map((f,i,arr)=>{
+      fl.innerHTML=upcoming.slice(0,24).map((f,i,a)=>{
         const dirIcon=f.dir==='arr'?'↓':'↑',dirColor=f.dir==='arr'?'var(--blue)':'var(--accent)';
-        const route=f.dir==='arr'?(f.dep_iata||'—')+' →':'→ '+(f.arr_iata||'—');
-        const isFirst=i===0;
-        let html=`<div class="flt-item${isFirst?' highlight':''}">
+        const route=f.dir==='arr'?(f.other||'—')+' →':'→ '+(f.other||'—');
+        let html=`<div class="flt-item${i===0?' highlight':''}">
           <div class="flt-dir" style="color:${dirColor};">${dirIcon}</div>
-          <div style="flex:1;min-width:0;"><div class="flt-no">${f.flight_iata||f.flight_icao||'—'}</div><div class="flt-route">${route}</div></div>
-          <div class="flt-time" style="color:${dirColor};">${fmt(f.t)}</div>
+          <div style="flex:1;min-width:0;"><div class="flt-no">${f.no||'—'}</div><div class="flt-route">${route}</div></div>
+          <div class="flt-time" style="color:${dirColor};">${fmt(new Date(f.t))}</div>
         </div>`;
-        if(i<arr.length-1){
-          const gap=Math.round((arr[i+1].t-f.t)/60000);
+        if(i<a.length-1){
+          const gap=Math.round((a[i+1].t-f.t)/60000);
           if(gap>=10&&gap<180){const gc=gap>=20?'var(--green)':'var(--orange)';html+=`<div class="flt-gap-badge" style="color:${gc};">${gap>=20?'✅':'⚠️'} 空檔 ${gap} 分鐘</div>`;}
         }
         return html;
       }).join('');
     }
     const updEl=document.getElementById('flt-updated');
-    if(updEl) updEl.textContent=`${fmt(now)} 查詢`;
+    if(updEl){const u=data.updated?new Date(data.updated):new Date();updEl.textContent=`${fmt(u)} 更新`;}
   }catch(e){
-    document.getElementById('flight-list').innerHTML='<div style="padding:12px;font-size:10px;color:var(--red);text-align:center;">查詢失敗，請稍後再試</div>';
+    sb.style.display='none';
+    fl.innerHTML='<div style="padding:12px;font-size:10px;color:var(--red);text-align:center;">航班資料暫時無法取得</div>';
   }
   if(btn) btn.disabled=false;
 }
