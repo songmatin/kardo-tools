@@ -1323,12 +1323,14 @@ async function fetchTides(){
 }
 
 const FLIGHT_API='https://kardo-flights.songmatin-2e5.workers.dev/';
-let _fltCache=null,_fltCacheTs=0;
-async function getFlightData(force){
-  if(!force && _fltCache && Date.now()-_fltCacheTs<90000) return _fltCache;
-  const r=await fetch(FLIGHT_API);
-  _fltCache=await r.json(); _fltCacheTs=Date.now();
-  return _fltCache;
+const _fltCache={}; // 每機場各自前端快取
+async function getFlightData(iata,force){
+  const c=_fltCache[iata];
+  if(!force && c && Date.now()-c.ts<90000) return c.data;
+  const r=await fetch(FLIGHT_API+'?ap='+encodeURIComponent(iata));
+  const data=await r.json();
+  _fltCache[iata]={data,ts:Date.now()};
+  return data;
 }
 const AP_IATA={RCSS:'TSA',RCTP:'TPE',RCGM:'HSZ',RCMQ:'RMQ',RCNN:'TNN',RCKH:'KHH'};
 let activeApIdx=0,flightTimer=null;
@@ -1352,7 +1354,8 @@ function selectAirport(i){
   document.getElementById('flight-list').innerHTML='<div style="padding:12px;font-size:10px;color:var(--w30);text-align:center;">載入中...</div>';
   if(flightTimer) clearInterval(flightTimer);
   fetchFlights();
-  flightTimer=setInterval(fetchFlights,60*1000);
+  // 只有分頁在前景時才定時更新；切到背景就停，避免空打
+  flightTimer=setInterval(()=>{if(document.visibilityState==='visible')fetchFlights();},60*1000);
 }
 
 async function fetchFlights(force){
@@ -1362,9 +1365,9 @@ async function fetchFlights(force){
   const iata=AP_IATA[AIRPORTS[activeApIdx].code];
   if(btn) btn.disabled=true;
   try{
-    const data=await getFlightData(force);
-    const apData=data.airports&&data.airports[iata];
-    if(!apData){ // 軍用場或未納入（如 HSZ 新竹）
+    const data=await getFlightData(iata,force);
+    const apData=data; // { arrivals, departures, updated, stale?, unsupported? }
+    if(data.unsupported){ // 軍用場或未納入（如 HSZ 新竹）
       sb.style.display='none';
       fl.innerHTML='<div style="padding:12px;font-size:10px;color:var(--w30);text-align:center;">此機場無民航班表（軍用／未提供）</div>';
       if(btn) btn.disabled=false; return;
@@ -1417,7 +1420,7 @@ async function fetchFlights(force){
       }).join('');
     }
     const updEl=document.getElementById('flt-updated');
-    if(updEl){const u=data.updated?new Date(data.updated):new Date();updEl.textContent=`${fmt(u)} 更新`;}
+    if(updEl){const u=data.updated?new Date(data.updated):new Date();updEl.textContent=`${fmt(u)}${data.stale?' (上次資料)':' 更新'}`;}
   }catch(e){
     sb.style.display='none';
     fl.innerHTML='<div style="padding:12px;font-size:10px;color:var(--red);text-align:center;">航班資料暫時無法取得</div>';
