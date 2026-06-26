@@ -343,6 +343,14 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 
 #wx-grid{grid-template-columns:1fr 1fr;}
 #wx-hourly-wrap::-webkit-scrollbar{display:none;}
+.wx-tools{display:grid;grid-template-columns:1fr 34px 34px;gap:5px;margin-bottom:8px;position:relative;}
+.wx-tools input{width:100%;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);color:#fff;font-size:10px;padding:7px 9px;outline:none;letter-spacing:.03em;}
+.wx-tools input:focus{border-color:var(--accent-bd);}
+.wx-tools input::placeholder{color:var(--w30);}
+.wx-tools button{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);color:var(--w55);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.wx-tools button:hover{border-color:var(--accent-bd);color:var(--accent);background:var(--accent-bg);}
+#wx-search-results{position:absolute;left:0;right:73px;top:calc(100% + 2px);z-index:620;background:rgba(20,18,16,0.97);border:0.5px solid var(--border);border-radius:6px;overflow:hidden;display:none;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
+#wx-place{font-size:9px;color:var(--w55);margin:-2px 0 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .wx-hour{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 6px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-sm);min-width:46px;flex-shrink:0;}
 .wx-hour.now{border-color:var(--accent-bd);background:var(--accent-bg);}
 .wx-hour-time{font-size:8px;color:var(--w55);letter-spacing:.04em;font-family:var(--mono);}
@@ -635,6 +643,14 @@ body.light .leaflet-control-locate a:hover{background:var(--accent)!important;co
 
     <div class="sec">
       <div class="sec-title">Weather · 天氣</div>
+      <div class="wx-tools">
+        <input type="text" id="wx-search-input" placeholder="搜尋天氣地點" autocomplete="off"
+               oninput="onWeatherSearchInput(this.value)" onkeydown="onWeatherSearchKey(event)">
+        <button type="button" title="查詢天氣地點" onclick="submitWeatherSearch()">⌕</button>
+        <button type="button" title="切回現地定位" onclick="useCurrentWeatherLocation()">⊕</button>
+        <div id="wx-search-results"></div>
+      </div>
+      <div id="wx-place">現地天氣</div>
       <div id="wx-hourly-wrap" style="overflow-x:auto;scrollbar-width:none;margin-bottom:8px;">
         <div id="wx-hourly" style="display:flex;gap:4px;min-width:max-content;padding-bottom:2px;"></div>
       </div>
@@ -711,7 +727,7 @@ const KML_COLORS = ['#7dd3fc','#38bdf8','#0ea5e9','#bae6fd','#93c5fd','#60a5fa']
 const CAA_COLORS = ['#50a0ff','#32d264','#c084fc','#fb923c','#f472b6','#fbbf24'];
 
 // ── STATE ──
-let lat=null, lng=null, map, userMk, radiusCir;
+let lat=null, lng=null, gpsLat=null, gpsLng=null, map, userMk, radiusCir;
 let nfzMap, nfzLayers={}, nfzInited=false;
 let layerObjects={};
 let kmlCounter=0, kmlLayers={};
@@ -1116,7 +1132,10 @@ function locate(){
 }
 function onPos(p){
   lat=p.coords.latitude; lng=p.coords.longitude;
+  gpsLat=lat; gpsLng=lng;
   setGPS(`${lat.toFixed(4)}, ${lng.toFixed(4)}`,'g');
+  setWeatherPlace('現地天氣');
+  clearWeatherSearch({keepLocation:true});
   if(userMk) map.removeLayer(userMk);
   if(radiusCir){map.removeLayer(radiusCir);radiusCir=null;}
   userMk=L.circleMarker([lat,lng],{radius:8,fillColor:'#32d264',fillOpacity:1,color:'#fff',weight:2}).addTo(map).bindPopup('📍 目前位置');
@@ -1126,7 +1145,10 @@ function onPos(p){
 }
 function onPosErr(){
   lat=25.0478; lng=121.5318;
+  gpsLat=lat; gpsLng=lng;
   setGPS('預設：台北','a');
+  setWeatherPlace('預設：台北');
+  clearWeatherSearch({keepLocation:true});
   map.setView([lat,lng],11);
   updateSun(); fetchWeather();
   setTimeout(()=>document.getElementById('loader').classList.add('gone'),900);
@@ -1513,6 +1535,90 @@ function renderNotams(){
 
 const GMAP_KEY='AIzaSyC6FIbAT7mT9sUY3W8H4VwMtQfGXURzu00';
 let searchTimer=null,searchMarker=null;
+let weatherSearchTimer=null,weatherSearchResults=[],weatherMarker=null;
+
+function onWeatherSearchInput(val){
+  clearTimeout(weatherSearchTimer);
+  if(val.trim().length<2){hideWeatherResults();return;}
+  weatherSearchTimer=setTimeout(()=>geocodeWeatherSearch(val),400);
+}
+function onWeatherSearchKey(e){
+  if(e.key==='Escape'){clearWeatherSearch();return;}
+  if(e.key==='Enter'){submitWeatherSearch();}
+}
+function submitWeatherSearch(){
+  const input=document.getElementById('wx-search-input');
+  const query=input?.value?.trim();
+  clearTimeout(weatherSearchTimer);
+  if(query) geocodeWeatherSearch(query);
+}
+async function geocodeWeatherSearch(query){
+  try{
+    const url=`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&region=tw&language=zh-TW&key=${GMAP_KEY}`;
+    const d=await(await fetch(url)).json();
+    if(d.status!=='OK'||!d.results.length){hideWeatherResults();return;}
+    showWeatherResults(d.results.slice(0,5));
+  }catch(e){hideWeatherResults();}
+}
+function showWeatherResults(results){
+  weatherSearchResults=results;
+  const el=document.getElementById('wx-search-results');
+  if(!el) return;
+  el.style.display='block';
+  el.innerHTML=results.map((r,i)=>{
+    const parts=r.formatted_address.split(',');
+    const main=parts.slice(0,2).join(',').trim(),sub=parts.slice(2).join(',').trim()||r.formatted_address;
+    return`<div class="search-item" onclick="selectWeatherResult(${i})">
+      <div>${escapeHtml(main)}</div><div class="search-item-sub">${escapeHtml(sub)}</div>
+    </div>`;
+  }).join('');
+}
+function selectWeatherResult(index){
+  const r=weatherSearchResults[index];
+  if(!r) return;
+  const loc=r.geometry.location;
+  applyWeatherLocation(loc.lat,loc.lng,r.formatted_address);
+}
+function applyWeatherLocation(rlat,rlng,name){
+  hideWeatherResults();
+  const input=document.getElementById('wx-search-input');
+  if(input) input.value=name;
+  if(weatherMarker) map.removeLayer(weatherMarker);
+  weatherMarker=L.circleMarker([rlat,rlng],{radius:8,fillColor:'#50a0ff',fillOpacity:1,color:'#fff',weight:2}).addTo(map).bindPopup(`<b>${escapeHtml(name)}</b>`).openPopup();
+  map.setView([rlat,rlng],13);
+  lat=rlat;lng=rlng;
+  setGPS(`${rlat.toFixed(4)}, ${rlng.toFixed(4)}`,'g');
+  setWeatherPlace(name);
+  updateSun();fetchWeather();
+}
+function useCurrentWeatherLocation(){
+  hideWeatherResults();
+  if(gpsLat==null||gpsLng==null){locate();return;}
+  lat=gpsLat;lng=gpsLng;
+  if(weatherMarker){map.removeLayer(weatherMarker);weatherMarker=null;}
+  clearWeatherSearch({keepLocation:true});
+  setGPS(`${lat.toFixed(4)}, ${lng.toFixed(4)}`,'g');
+  setWeatherPlace('現地天氣');
+  map.setView([lat,lng],12);
+  updateSun();fetchWeather();
+}
+function clearWeatherSearch(options={}){
+  const input=document.getElementById('wx-search-input');
+  if(input) input.value='';
+  hideWeatherResults();
+  if(!options.keepLocation&&weatherMarker){map.removeLayer(weatherMarker);weatherMarker=null;}
+}
+function hideWeatherResults(){
+  const el=document.getElementById('wx-search-results');
+  if(el) el.style.display='none';
+}
+function setWeatherPlace(name){
+  const el=document.getElementById('wx-place');
+  if(el) el.textContent=name || '現地天氣';
+}
+function escapeHtml(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
 function onSearchInput(val){
   const clear=document.getElementById('search-clear');
@@ -1551,7 +1657,7 @@ function selectResult(rlat,rlng,name){
   searchMarker=L.circleMarker([rlat,rlng],{radius:8,fillColor:'#50a0ff',fillOpacity:1,color:'#fff',weight:2}).addTo(map).bindPopup(`<b>${name}</b>`).openPopup();
   map.setView([rlat,rlng],14);
   lat=rlat;lng=rlng;
-  updateSun();fetchWeather();setGPS(`${rlat.toFixed(4)}, ${rlng.toFixed(4)}`,'g');
+  updateSun();fetchWeather();setGPS(`${rlat.toFixed(4)}, ${rlng.toFixed(4)}`,'g');setWeatherPlace(name);
 }
 function clearSearch(){
   document.getElementById('search-input').value='';
@@ -1559,7 +1665,10 @@ function clearSearch(){
   hideResults();
   if(searchMarker){map.removeLayer(searchMarker);searchMarker=null;}
 }
-document.addEventListener('click',e=>{if(!document.getElementById('search-wrap')?.contains(e.target)) hideResults();});
+document.addEventListener('click',e=>{
+  if(!document.getElementById('search-wrap')?.contains(e.target)) hideResults();
+  if(!document.querySelector('.wx-tools')?.contains(e.target)) hideWeatherResults();
+});
 
 // ── RESIZER ──
 (function(){
