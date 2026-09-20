@@ -12,6 +12,8 @@
 import json, sys, time, urllib.parse, urllib.request, os
 
 BASE = "https://dronegis.caa.gov.tw/server/rest/services/Hosted"
+TIMEOUT = 25
+RETRIES = 3
 
 # 輸出檔名 -> (service, layerId)  與前端 index.html 的 fetch 對應
 LAYERS = {
@@ -26,9 +28,32 @@ LAYERS = {
 PAGE = 1000  # 伺服器 maxRecordCount=2000
 
 def get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "kardo-tools-updater/1.0"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.loads(r.read().decode("utf-8"))
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; kardo-tools-updater/1.0; +https://tools.songmatin.com/)",
+        "Accept": "application/json,text/plain,*/*",
+    }
+    last_error = None
+    for attempt in range(1, RETRIES + 1):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except Exception as e:
+            last_error = e
+            if attempt < RETRIES:
+                wait = attempt * 5
+                print(f"    retry {attempt}/{RETRIES} after {wait}s: {e}")
+                time.sleep(wait)
+    raise last_error
+
+def existing_feature_count(path):
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        feats = data.get("features")
+        return len(feats) if isinstance(feats, list) else None
+    except Exception:
+        return None
 
 def count(service, lid):
     q = urllib.parse.urlencode({"where": "1=1", "returnCountOnly": "true", "f": "json"})
@@ -66,10 +91,16 @@ def main():
     print(f"輸出到: {os.path.abspath(out_dir)}\n")
     summary, ok = [], True
     for name, (service, lid) in LAYERS.items():
+        path = os.path.join(out_dir, f"{name}.geojson")
         try:
             total, feats = fetch_layer(name, service, lid)
         except Exception as e:
-            print(f"  !! {name} 失敗: {e}")
+            existing = existing_feature_count(path)
+            if existing is not None:
+                print(f"  !! {name} 來源暫時無法連線，保留既有檔案: {existing} features ({e})\n")
+                summary.append((name, "STALE", existing, existing))
+                continue
+            print(f"  !! {name} 失敗且沒有既有檔案可保留: {e}")
             summary.append((name, "ERROR", 0, 0)); ok = False
             continue
         fc = {
@@ -78,7 +109,6 @@ def main():
             "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
             "features": feats,
         }
-        path = os.path.join(out_dir, f"{name}.geojson")
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(fc, fh, ensure_ascii=False)
         match = "OK" if len(feats) == total else f"!! 數量不符 (got {len(feats)}, expect {total})"
